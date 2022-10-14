@@ -73,7 +73,7 @@
   return_cascade(df_msd %>% filter(funding_agency == "USAID"), 1)
  
   # Generate plots for all agencies
-  batch_cascade_plot(df_msd, imgpath = "Images/Cascade/All")
+  batch_cascade_plot(df_msd, imgpath = "Images/Cascade/All",)
     
   # Generate plots for just USAID
   batch_cascade_plot(df_msd %>% filter(funding_agency == "USAID"),
@@ -179,22 +179,14 @@
 # VIRAL LOAD & COVERAGE ---------------------------------------------------
 
   df_vl <- df_msd %>% 
-    filter(funding_agency == "USAID",
-           indicator %in% c("TX_CURR","TX_CURR_Lag2", "TX_PVLS"),
-           standardizeddisaggregate %in% c("Age/Sex/HIVStatus", 
-                                           "Age/Sex/Indication/HIVStatus")
-           ) %>% 
-    clean_indicator() %>% 
-    group_by(indicator, fiscal_year) %>% 
-    summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop") %>% 
-    reshape_msd(include_type = FALSE) %>% 
-    pivot_wider(names_from = indicator,
-                names_glue = "{tolower(indicator)}") %>% 
-    mutate(vlc = tx_pvls_d/tx_curr_lag2,
-           vls = tx_pvls / tx_pvls_d,
-           vls_adj = tx_pvls /tx_curr_lag2) 
+    filter(funding_agency == "USAID") %>% 
+    create_vl_df()
   
-  
+  # Remap mech names so EQUIP becomes ACTION HIV TO SHOW across time
+  df_vl_ip <- df_msd %>% 
+    filter(funding_agency == "USAID") %>%
+    mutate(mech_name = ifelse(mech_name == "EQUIP", "ACTION HIV", mech_name)) %>% 
+    create_vl_df(mech_name)
   
   top <- df_vl %>% 
     ggplot(aes(x = period, group = 1)) +
@@ -218,7 +210,6 @@
              hjust = 0.1) +
     si_style_nolines() +
     expand_limits(x = c(1, 14), y = c(0.7,1.05)) +
-    scale_x_discrete(position = "top") +
     theme(axis.text.y = element_blank(), 
           axis.text.x = element_blank()) +
     labs(x = NULL, y = NULL)
@@ -235,15 +226,20 @@
     annotate("segment", x = 11.5, xend = 11.5, y = 355000, yend = 510000, 
              color = grey70k) +
     annotate("text", x = 11.65, y = 450000, label = "Coverage gap", 
-             hjust = 0, size = 11/.pt, family = "Source Sans Pro", 
+             hjust = 0, size = 8/.pt, family = "Source Sans Pro", 
              color = grey70k)+
     annotate("text", x = 11, y = 525000, label = "TX_CURR_LAG2", 
-             size = 8/.pt, family = "Source Sans Pro", color = grey50k)
+             size = 8/.pt, family = "Source Sans Pro", color = grey50k) +
+  annotate("text", x = 12, y = 300000, label = "TX_PVLS_D", 
+           size = 8/.pt, family = "Source Sans Pro", color = denim)
   
   top / bottom + plot_layout(heights = c(1, 3)) +
     plot_annotation(title = glue("VIRAL LOAD SUMMARY FOR {metadata$curr_fy}"),
                     caption = metadata$caption)
     
+
+# HTS AND CASE FINDING ----------------------------------------------------
+
   
 
 # SPINDOWN ============================================================================

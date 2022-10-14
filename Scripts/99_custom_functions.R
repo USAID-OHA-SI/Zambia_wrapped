@@ -51,4 +51,29 @@
 
 # NEXT SECTION ------------------------------------------------------------
 
+ create_vl_df <- function(df, ...) {
+   df <- df %>%
+     filter(
+       indicator %in% c("TX_CURR", "TX_CURR_Lag2", "TX_PVLS"),
+       standardizeddisaggregate %in% c(
+         "Age/Sex/HIVStatus",
+         "Age/Sex/Indication/HIVStatus"
+       )
+     ) %>%
+     clean_indicator() %>%
+     group_by(indicator, fiscal_year, ...) %>%
+     summarise(across(starts_with("qtr"), sum, na.rm = TRUE), 
+               .groups = "drop") %>%
+     reshape_msd(include_type = FALSE) %>%
+     pivot_wider(
+       names_from = indicator,
+       names_glue = "{tolower(indicator)}"
+     ) %>%
+     mutate(
+       vlc = tx_pvls_d / tx_curr_lag2,
+       vls = tx_pvls / tx_pvls_d,
+       vls_adj = tx_pvls / tx_curr_lag2
+     )
+   return(df)
+ }
  
