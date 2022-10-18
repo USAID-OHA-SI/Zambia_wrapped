@@ -89,12 +89,11 @@
    name2 <- stringr::word(y, start = 1, end = 3)
    color <- stringr::word(z)
 
-  glue::glue("<div style='line-height:10px'<span style='font-weight:bold;font-size:14px;color:{color}>{name}</div><div><span style='font-weight:regular;font-size:11px'>{name2}</br></div>")
+  glue::glue("<div style='line-height:10px'<span style='font-weight:bold;font-size:14px;color:{color}'>{name}</div>
+             <div><span style='font-weight:regular;font-size:11px'>{name2}</br></div>")
  }
 
  
-tmp <-  df_achv_all %>% 
-   select(mech_code, mech_name, indicator, achievement, tgt_rslt_sum, achv_color) %>% slice(1:5) %>% 
-   mutate(achv = percent(achievement, 1), 
-          value = format_indicator(achv, tgt_rslt_sum, achv_color )) 
+# Create a gt loop to format indicators
+ legend_chunk <- gt::md(glue::glue("Achievement legend: <img src= '{legend_snapshot}' style='height:15px;'> "))
  
