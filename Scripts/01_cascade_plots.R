@@ -262,6 +262,10 @@
     filter(funding_agency == "USAID") %>% 
     create_vl_df()
   
+  df_vl_peds <- df_msd %>% 
+    filter(funding_agency == "USAID", trendscoarse == "<15") %>% 
+    create_vl_df()
+  
   # Remap mech names so EQUIP becomes ACTION HIV TO SHOW across time
   df_vl_ip <- df_msd %>% 
     filter(funding_agency == "USAID") %>%
@@ -362,6 +366,58 @@
       plot_annotation(title = glue("VIRAL LOAD SUMMARY FOR {metadata$curr_fy} BY PARTNER")) 
     
     si_save("Images/VL_summary_partner.png")
+    
+  # VLS trends for peds
+    top <- df_vl_peds %>% 
+      ggplot(aes(x = period, group = 1)) +
+      geom_line(aes(y = vls), color = burnt_sienna) +
+      geom_point(aes(y = vls), shape = 21, fill = burnt_sienna, size = 3,
+                 color = "white") +
+      geom_line(aes(y = vlc), color = denim) +
+      geom_point(aes(y = vlc), shape = 21, fill = denim, size = 3,
+                 color = "white") +
+      geom_text(aes(y = vlc, label = percent(vlc, 1)), size = 9/.pt,
+                family = "Source Sans Pro", color = denim, 
+                vjust = -1) +
+      geom_text(aes(y = vls, label = percent(vls, 1)), size = 9/.pt,
+                family = "Source Sans Pro", color = burnt_sienna, 
+                vjust = -1) +
+      annotate("text", x = 8.5, y = .97, label = "Viral Load\nSuppression",
+               color = burnt_sienna, size = 10/.pt,
+               hjust = 0.1) +
+      annotate("text", x = 8.5, y = .69, label = "Viral Load\nCoverage",
+               color = denim, size = 10/.pt,
+               hjust = 0.1) +
+      si_style_nolines() +
+      expand_limits(x = c(1, 10), y = c(0.7,1.05)) +
+      theme(axis.text.y = element_blank(), 
+            axis.text.x = element_blank()) +
+      labs(x = NULL, y = NULL)
+    
+    bottom <- df_vl_peds %>% 
+      ggplot(aes(x = period)) +
+      geom_col(aes(y = tx_curr_lag2), fill = grey10k) +
+      geom_col(aes(y = tx_pvls_d), fill = denim) +
+      si_style_ygrid() +
+      scale_y_continuous(labels = comma) +
+      expand_limits(x = c(1, 10)) +
+      labs(x = NULL, y = NULL, caption = metadata$caption) +
+      annotate("segment", x = 8.5, xend = 8.5, y = 10200, yend = 17000, 
+               color = grey70k) +
+      annotate("text", x = 8.65, y = 15000, label = "Coverage gap", 
+               hjust = 0, size = 8/.pt, family = "Source Sans Pro", 
+               color = grey70k)+
+      annotate("text", x = 9, y = 17700, label = "TX_CURR_LAG2", 
+               size = 8/.pt, family = "Source Sans Pro", color = grey50k) +
+      annotate("text", x = 9, y = 10100, label = "TX_PVLS_D", 
+               size = 8/.pt, family = "Source Sans Pro", color = denim) 
+    
+    top / bottom + plot_layout(heights = c(1, 3)) +
+      plot_annotation(title = glue("VIRAL LOAD SUMMARY FOR {metadata$curr_fy}"))
+    
+    si_save("Images/VL_summary_peds_2022.png")
+    
+    
 
 # SPINDOWN ============================================================================
 
