@@ -119,7 +119,7 @@
   ip_mdb <- 
     df %>% 
     filter(mech_code == 82086, fiscal_year < 2023) %>% 
-    make_mdb_df() %>% 
+    make_mdb_df() %>% View()
     filter(fiscal_year == metadata$curr_fy, operatingunit == "Global") %>% 
     select(agency, indicator, indicator_plain, qtr1, qtr2, qtr3, qtr4, cumulative, targets) %>% 
     mutate(achv = cumulative / targets) %>% 
