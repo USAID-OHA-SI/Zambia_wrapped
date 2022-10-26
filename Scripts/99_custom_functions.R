@@ -95,5 +95,60 @@
 
  
 # Create a gt loop to format indicators
- legend_chunk <- gt::md(glue::glue("Achievement legend: <img src= '{legend_snapshot}' style='height:15px;'> "))
+ legend_chunk <- gt::md(glue::glue("Achievement legend: <img src= '{selfdestructin5::legend_snapshot}' style='height:15px;'> "))
+ 
+
+# Extract coordinates -----------------------------------------------------
+
+ pull_coords <- function(cntry, ou_uid, org_lvl, psnu_lvl, baseurl = "https://final.datim.org/"){
+   
+   print(paste("Running DATIM API for coordinates in", cntry,  Sys.time(),
+               sep = " ... "))
+   
+   paste0(baseurl,
+          "api/organisationUnits?filter=path:like:", ou_uid,
+          "&filter=level:eq:", org_lvl, "&",
+          "&fields=id,path,geometry&paging=false") %>%
+     httr::GET(httr::authenticate(glamr::datim_user(),glamr::datim_pwd())) %>%
+     httr::content("text") %>%
+     jsonlite::fromJSON() %>%
+     purrr::pluck("organisationUnits") %>%
+     tibble::as_tibble() %>%
+     clean_coords(psnu_lvl)
+   
+ }  
+ 
+ 
+ # FUNCTION - CLEAN COORDINATES --------------------------------------------
+ 
+ clean_coords <- function(df, psnu_lvl){
+   
+   #limit only to sites with coordinates
+   # df <- dplyr::filter(df, geometry$type == "Point") 
+   
+   #if no sites, return null
+   if(nrow(df) < 1)
+     return(NULL)
+   
+   levels <- df$path %>%
+     stringr::str_count("/") %>%
+     max()
+   
+   #identify psnu
+   df <- df %>% 
+     dplyr::mutate(path = stringr::str_remove(path, "^/")) %>%
+     tidyr::separate(path, paste0("orglvl_", seq(1:levels)), sep = "/", fill = "right") %>% 
+     dplyr::select(orgunituid = id, geometry,
+                   psnuuid = dplyr::ends_with(as.character(psnu_lvl)))
+   
+   #return uid + lat + long
+   df <- df %>% 
+     dplyr::mutate(coordinates = geometry$coordinates) %>% 
+     dplyr::select(-geometry) %>% 
+     tidyr::unnest_wider(coordinates, names_sep = "_") %>% 
+     dplyr::rename(longitude = "coordinates_1", latitude = "coordinates_2") %>%
+     dplyr::mutate_at(dplyr::vars("longitude", "latitude"), as.double)
+   
+   return(df)
+ } 
  

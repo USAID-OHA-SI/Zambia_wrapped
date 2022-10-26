@@ -32,7 +32,7 @@
     load_secrets()
     merdata <- file.path(glamr::si_path("path_msd"))
     file_path <- return_latest(folderpath = merdata,
-      pattern = "PSNU_IM_FY20-23_20220916_v2_1_Zambia.zip")
+      pattern = "Genie-PSNUByIMs-Zambia")
       
     plhiv_path <- return_latest(folderpath = merdata,
                                 pattern = "SUBNAT")
@@ -70,10 +70,10 @@
   
   # All of PEPFAR Zambia cascade
   return_cascade(df_msd, 1)
-  return_cascade(df_msd %>% filter(funding_agency == "USAID"), 1)
+  return_cascade(df_msd %>% filter(funding_agency == "USAID"), 1) %>% prinf()
  
   # Generate plots for all agencies
-  batch_cascade_plot(df_msd, imgpath = "Images/Cascade/All",)
+  batch_cascade_plot(df_msd, imgpath = "Images/Cascade/All")
     
   # Generate plots for just USAID
   batch_cascade_plot(df_msd %>% filter(funding_agency == "USAID"),
@@ -88,6 +88,9 @@
   
   batch_cascade_plot(df_msd %>% filter(mech_name == "ACTION HIV"),
                      imgpath = "Images/Cascade/ACTION_HIV")
+  
+  return_cascade(df_msd %>% filter(mech_name == "DISCOVER"), 13) %>% prinf()
+  
 
   
 # TREATMENT COVERAGE BY PROVINCE ------------------------------------------
@@ -155,6 +158,7 @@
          title = glue("USAID TX_CURR WAS AT {comma(aid_tx_tot)} IN {metadata$curr_pd}") ,
          caption = metadata$caption) +
     si_style_ygrid()
+  si_save("Images/TX_CURR_summary_by_province.png")
   
   tx_snu %>% 
     filter(snu1 %ni% c("Lusaka", "Southern", "Western", "Eastern")) %>% 
@@ -174,8 +178,84 @@
     labs(x = NULL, y = NULL, 
          title = glue("USAID TX_CURR ACHIEVEMENT WAS AT {percent(aid_tx_achv)} IN {metadata$curr_pd}"),
          caption = metadata$caption)
+
+  si_save("Images/TX_CURR_comparison_to_ave.png") 
   
 
+# TX_CURR PEDS -------------------------------------------------
+  
+  tx_curr_peds <- df_msd %>% 
+    mutate(mech_name = ifelse(mech_name == "EQUIP", "ACTION HIV", mech_name)) %>% 
+    filter(funding_agency == "USAID", 
+           indicator == "TX_CURR", 
+           standardizeddisaggregate == "Age/Sex/HIVStatus",
+           trendscoarse == "<15") %>% 
+    group_by(mech_name, fiscal_year, indicator) %>% 
+    summarise(across(matches("targ|qtr"), sum, na.rm = T)) %>% 
+    ungroup() %>% 
+    reshape_msd(direction = "quarters") %>% 
+    mutate(achv = results_cumulative / targets,
+           qtr_flag = ifelse(str_detect(period, "Q4"), 1, 0),
+           mech_name = fct_relevel(mech_name, 
+                                   c("SAFE", "ACTION HIV", "DISCOVER", "Zam Health")))
+  
+  
+  tx_curr_peds %>% 
+    ggplot(aes(x = period)) +
+    geom_col(aes(y = targets), fill = grey10k) +
+    geom_col(aes(y = results_cumulative), fill = scooter) +
+    facet_wrap(~mech_name, nrow = 1,) +
+    si_style_ygrid(facet_space = 0.25) +
+    scale_x_discrete(labels = c("FY21Q1", "", "", "",
+                                "FY22Q1", "", "", "")) +
+    scale_y_continuous(labels = comma)+
+    geom_text(data = . %>% filter(qtr_flag == 1), 
+              aes(y = results_cumulative, label = percent(achv, 1)),
+              family = "Source Sans Pro",
+              size = 11/.pt, 
+              vjust = -.5)+
+    labs(x = NULL, y = NULL, title = "TX_CURR PEDIATRIC TRENDS BY PARTNER",
+         subtitle = "Gray bars are TX_CURR targets",
+         caption = metadata$caption) 
+  si_save("Images/TX_CURR_pediatric_trends.png", scale = 1.25)
+  
+
+# TX_CURR AYP -------------------------------------------------------------
+
+  tx_curr_ayp <- df_msd %>% 
+    mutate(mech_name = ifelse(mech_name == "EQUIP", "ACTION HIV", mech_name)) %>% 
+    filter(funding_agency == "USAID", 
+           indicator == "TX_CURR", 
+           standardizeddisaggregate == "Age/Sex/HIVStatus",
+           ageasentered %in% c("15-19", "20-24")) %>% 
+    group_by(mech_name, fiscal_year, indicator) %>% 
+    summarise(across(matches("targ|qtr"), sum, na.rm = T)) %>% 
+    ungroup() %>% 
+    reshape_msd(direction = "quarters") %>% 
+    mutate(achv = results_cumulative / targets,
+           qtr_flag = ifelse(str_detect(period, "Q4"), 1, 0),
+           mech_name = fct_relevel(mech_name, 
+                                   c("SAFE", "ACTION HIV", "DISCOVER", "Zam Health")))
+  
+  tx_curr_ayp %>% 
+    ggplot(aes(x = period)) +
+    geom_col(aes(y = targets), fill = grey10k) +
+    geom_col(aes(y = results_cumulative), fill = scooter) +
+    facet_wrap(~mech_name, nrow = 1,) +
+    si_style_ygrid(facet_space = 0.25) +
+    scale_x_discrete(labels = c("FY21Q1", "", "", "",
+                                "FY22Q1", "", "", "")) +
+    scale_y_continuous(labels = comma) +
+    geom_text(data = . %>% filter(qtr_flag == 1), 
+              aes(y = results_cumulative, label = percent(achv, 1)),
+              family = "Source Sans Pro",
+              size = 11/.pt, 
+              vjust = -.5)+
+    labs(x = NULL, y = NULL, title = "TX_CURR PEDIATRIC TRENDS BY PARTNER",
+         subtitle = "Gray bars are TX_CURR targets",
+         caption = metadata$caption) 
+  si_save("Images/TX_CURR_ayp_trends.png", scale = 1.25)
+  
 # VIRAL LOAD & COVERAGE ---------------------------------------------------
 
   df_vl <- df_msd %>% 
@@ -186,7 +266,8 @@
   df_vl_ip <- df_msd %>% 
     filter(funding_agency == "USAID") %>%
     mutate(mech_name = ifelse(mech_name == "EQUIP", "ACTION HIV", mech_name)) %>% 
-    create_vl_df(mech_name)
+    create_vl_df(mech_name) %>% 
+    mutate(mech_name = fct_relevel(mech_name, c("SAFE", "ACTION HIV", "DISCOVER", "Zam Health")))
   
   top <- df_vl %>% 
     ggplot(aes(x = period, group = 1)) +
@@ -202,45 +283,85 @@
     geom_text(aes(y = vls, label = percent(vls, 1)), size = 9/.pt,
               family = "Source Sans Pro", color = burnt_sienna, 
               vjust = -1) +
-    annotate("text", x = 11.5, y = .97, label = "Viral Load Suppression",
+    annotate("text", x = 8.5, y = .97, label = "Viral Load\nSuppression",
              color = burnt_sienna, size = 10/.pt,
              hjust = 0.1) +
-    annotate("text", x = 11.5, y = .69, label = "Viral Load Coverage",
+    annotate("text", x = 8.5, y = .69, label = "Viral Load\nCoverage",
              color = denim, size = 10/.pt,
              hjust = 0.1) +
     si_style_nolines() +
-    expand_limits(x = c(1, 14), y = c(0.7,1.05)) +
+    expand_limits(x = c(1, 10), y = c(0.7,1.05)) +
     theme(axis.text.y = element_blank(), 
           axis.text.x = element_blank()) +
     labs(x = NULL, y = NULL)
 
-  
   bottom <- df_vl %>% 
     ggplot(aes(x = period)) +
     geom_col(aes(y = tx_curr_lag2), fill = grey10k) +
     geom_col(aes(y = tx_pvls_d), fill = denim) +
     si_style_ygrid() +
     scale_y_continuous(labels = comma) +
-    expand_limits(x = c(1, 14)) +
+    expand_limits(x = c(1, 10)) +
     labs(x = NULL, y = NULL) +
-    annotate("segment", x = 11.5, xend = 11.5, y = 355000, yend = 510000, 
+    annotate("segment", x = 8.5, xend = 8.5, y = 345000, yend = 510000, 
              color = grey70k) +
-    annotate("text", x = 11.65, y = 450000, label = "Coverage gap", 
+    annotate("text", x = 8.65, y = 450000, label = "Coverage gap", 
              hjust = 0, size = 8/.pt, family = "Source Sans Pro", 
              color = grey70k)+
-    annotate("text", x = 11, y = 525000, label = "TX_CURR_LAG2", 
+    annotate("text", x = 9, y = 540000, label = "TX_CURR_LAG2", 
              size = 8/.pt, family = "Source Sans Pro", color = grey50k) +
-  annotate("text", x = 12, y = 300000, label = "TX_PVLS_D", 
+  annotate("text", x = 9, y = 300000, label = "TX_PVLS_D", 
            size = 8/.pt, family = "Source Sans Pro", color = denim)
   
   top / bottom + plot_layout(heights = c(1, 3)) +
     plot_annotation(title = glue("VIRAL LOAD SUMMARY FOR {metadata$curr_fy}"),
                     caption = metadata$caption)
     
-
-# HTS AND CASE FINDING ----------------------------------------------------
-
+  si_save("Images/VL_summary_2022.png")
   
+  # IP VERSION ON 1 GRAPH using small multiples
+  top_ip <- 
+    df_vl_ip %>% 
+    ggplot(aes(x = period, group = 1)) +
+    geom_line(aes(y = vls), color = burnt_sienna) +
+    geom_point(aes(y = vls), shape = 21, fill = burnt_sienna, size = 3,
+               color = "white") +
+    geom_line(aes(y = vlc), color = denim) +
+    geom_point(aes(y = vlc), shape = 21, fill = denim, size = 3,
+               color = "white") +
+    geom_text(aes(y = vlc, label = percent(vlc, 1)), size = 9/.pt,
+              family = "Source Sans Pro", color = denim, 
+              vjust = -1) +
+    geom_text(aes(y = vls, label = percent(vls, 1)), size = 9/.pt,
+              family = "Source Sans Pro", color = burnt_sienna, 
+              vjust = -1) +
+    si_style_nolines(facet_space = 0.5) +
+    facet_wrap(~mech_name, nrow = 1) +
+      theme(axis.text.y = element_blank(), 
+          axis.text.x = element_blank()) +
+    labs(x = NULL, y = NULL) +
+    expand_limits(y = c(0.7,1.15)) 
+   
+    bottom_ip <- 
+      df_vl_ip %>% 
+      ggplot(aes(x = period)) +
+      geom_col(aes(y = tx_curr_lag2), fill = grey10k) +
+      geom_col(aes(y = tx_pvls_d), fill = denim) +
+      si_style_ygrid(facet_space = 0.5) +
+      scale_y_continuous(labels = comma) +
+      labs(x = NULL, y = NULL) +
+      facet_wrap(~mech_name, nrow = 1) +
+      scale_x_discrete(labels = c("FY21Q1", "", "", "",
+                                  "FY22Q1", "", "", "")) +
+      coord_cartesian(expand = F) +
+      #get rid of facet labels
+      theme(strip.text.x = element_blank())+
+      labs(caption = metadata$caption)
+    
+    plot_ip <- top_ip / bottom_ip + plot_layout(heights = c(1, 3)) +
+      plot_annotation(title = glue("VIRAL LOAD SUMMARY FOR {metadata$curr_fy} BY PARTNER")) 
+    
+    si_save("Images/VL_summary_partner.png")
 
 # SPINDOWN ============================================================================
 

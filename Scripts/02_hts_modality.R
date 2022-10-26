@@ -120,10 +120,10 @@
          caption = glue("Source: {metadata$caption}")) +
     theme(legend.position = "none") +
     scale_y_continuous(label = comma) +
-    scale_x_discrete(labels = c("FY20Q1", "", "", "",
-                                "FY21Q1", "", "", "", 
+    scale_x_discrete(labels = c("FY21Q1", "", "", "",
                                 "FY22Q1", "", "", "")) +
     si_style_ygrid(facet_space = 0.5) 
+ si_save("Images/Index_testing_summary_by_modality")
   
 
  # Linkage visual w/ targets
@@ -140,7 +140,7 @@
    si_style_ygrid() +
    scale_y_continuous(labels = comma) +
    labs(x = NULL, y = NULL) +
-   expand_limits(x = c(0, 13)) 
+   expand_limits(x = c(0, 9)) 
 
  # Linkage plot - #b08472
  top_hts <- df_linkage %>% 
@@ -155,15 +155,16 @@
              color = "#b08472", 
              vjust = -1.5) +
   si_style_nolines() +
-   expand_limits(y = c(.85, 1), x = c(0, 13)) +
+   expand_limits(y = c(.85, 1), x = c(0, 9)) +
  theme(axis.text.y = element_blank(), 
        axis.text.x = element_blank()) +
    labs(x = NULL, y = NULL) +
-   annotate("text", x = 11.5, y = 0.87, label = "Linkage", 
+   annotate("text", x = 8.5, y = 0.87, label = "Linkage", 
             size = 11/.pt, color = "#b08472")
 
  top_hts / bottom_hts +
    plot_layout(heights = c(1, 4))
+ si_save("Images/Linkage_summary.png")
  
  # POSITIVITY (TARGETS / RESULTS)
  df_hts_combo <- 
@@ -179,13 +180,24 @@
  
  df_hts_combo %>% 
    ggplot(aes(x = period)) +
-   geom_col(aes(y = HTS_TST), fill = grey10k, width = 0.5,
-            position = position_nudge(x = 0.25)) +
-   geom_col(aes(y = HTS_TST_POS), fill = grey20k, width = 0.5) +
-   geom_col(aes(y = HTS_TST_cmltv), width = 0.5, fill = grey50k) +
-   geom_col(aes(y = HTS_TST_POS_cmltv), width = 0.5, fill = "#855C75") +
+   geom_col(aes(y = HTS_TST), fill = "#e0d4db", width = 0.5,
+            position = position_nudge(x = 0.1)) +
+   geom_col(aes(y = HTS_TST_POS), fill = "#855C75", width = 0.5) +
+   geom_text(aes(y = HTS_TST_POS, label = percent(HTS_TST_POS/HTS_TST, 1)),
+             size = 11/.pt, 
+             family = "Source Sans Pro", 
+             color = grey90k,
+             vjust = -0.5) +
+   #geom_col(aes(y = HTS_TST_cmltv), width = 0.5, fill = grey50k) +
+   #geom_col(aes(y = HTS_TST_POS_cmltv), width = 0.5, fill = "#855C75") +
    si_style_ygrid() +
-   scale_y_continuous(labels = comma)
+   scale_y_continuous(labels = comma) +
+   labs(x = NULL, y = NULL, title = "TESTING POSITIVITY TRENDS",
+        caption = metadata$caption)+
+   coord_cartesian(expand = F)
+ si_save("Images/HTS_positivity_summary.png")
 
-# SPINDOWN ============================================================================
-
+# TODO  ============================================================================
+# REPEAT BY IPS
+ 
+ 
