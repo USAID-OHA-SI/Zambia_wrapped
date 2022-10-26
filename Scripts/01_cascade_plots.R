@@ -251,7 +251,7 @@
               family = "Source Sans Pro",
               size = 11/.pt, 
               vjust = -.5)+
-    labs(x = NULL, y = NULL, title = "TX_CURR PEDIATRIC TRENDS BY PARTNER",
+    labs(x = NULL, y = NULL, title = "TX_CURR AYP (15-24) TRENDS BY PARTNER",
          subtitle = "Gray bars are TX_CURR targets",
          caption = metadata$caption) 
   si_save("Images/TX_CURR_ayp_trends.png", scale = 1.25)
