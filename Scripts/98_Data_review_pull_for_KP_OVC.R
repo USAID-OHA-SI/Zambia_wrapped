@@ -37,7 +37,10 @@
 
 # LOAD DATA ============================================================================  
 
-  msd <- read_msd(file_path)
+  msd <- read_msd(file_path) %>% 
+      filter(funding_agency == "USAID") %>% 
+      fix_mech_names() %>% 
+      mutate(snu1 = str_remove_all(snu1, " Province"))
 
 # MUNGE ============================================================================
   
@@ -47,26 +50,29 @@
                               "KP_PREV", "PrEP_CT", "PrEP_CURR", "PrEP_NEW",
                               "TX_CURR", "TX_NEW", "TX_PVLS"),
              standardizeddisaggregate %in% c("KeyPop", "KeyPop/HIVStatus", 
-                                             "KeyPopAbr", "KeyPop/Result")) %>% 
-      clean_indicator() %>% 
-      fix_mech_names() %>% 
-      mutate(snu1 = str_remove_all(snu1, " Province"))
+                                             "KeyPopAbr", "KeyPop/Result"),
+             fiscal_year == metadata$curr_fy) %>% 
+      clean_indicator()
     
     
-  # PULLING DOWN ALL OVC DISAGS FOR REVIEW  
+    
+  # PULLING DOWN ALL OVC DISAGS FOR REVIEW -- ADD IN GEND_GBV  
   df_ovc <- msd %>% 
     filter(indicator %in% c("OVC_SERV_UNDER_18", "OVC_HIVSTAT", "OVC_SERV",
                             "OVC_SERV_ACTIVE", "OVC_SERV_GRADUATED", "OVC_SERV_OVER_18",
-                            "OVC_SERV_UNDER_18", "PP_PREV"),
+                            "OVC_SERV_UNDER_18", "PP_PREV", 
+                            "GEND_GBV", "GEND_GBV_PhysicalEmotionalViolence",
+                            "GEND_GBV_SexualViolence"),
            standardizeddisaggregate %in% c("Total Denominator", "Total Numerator", 
                                            "Age/Sex/ReportedStatus",
                                            "Age/Sex/DREAMS", "Age/Sex/Preventive",
                                            "Age/Sex/ProgramStatus", "Age/Sex/ProgramStatusCaregiver",
                                            "ProgramStatus", "TransferExit",
-                                           "Age/Sex", "PopulationPriorityType", "Status"),
+                                           "Age/Sex", "PopulationPriorityType", "Status",
+                                           "Age/Sex/PEP", "Age/Sex/ViolenceType", 
+                                           "ViolenceServiceType"),
            fiscal_year == metadata$curr_fy) %>% 
-    clean_indicator() %>% 
-    fix_mech_names()
+    clean_indicator() 
     
   
 # Create Google Sheet ============================================================================
@@ -85,6 +91,14 @@
     summarise(across(matches("targ|qtr"), sum, na.rm = T)) %>% 
     relocate(targets, .after = qtr4) %>% 
   googlesheets4::sheet_write(ss = gd_id, sheet = "OVC_data")
+  
+
+  # Bind it together and write to a single sheet
+  bind_rows(df_kp, df_ovc) %>% 
+    group_by(mech_code, mech_name, fiscal_year, indicator, otherdisaggregate, standardizeddisaggregate) %>% 
+    summarise(across(matches("targ|qtr"), sum, na.rm = T)) %>% 
+    relocate(targets, .after = qtr4) %>% 
+    googlesheets4::sheet_write(ss = gd_id, sheet = "Combined_data")
   
 # SPINDOWN ============================================================================
 

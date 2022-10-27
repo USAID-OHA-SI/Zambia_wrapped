@@ -16,13 +16,10 @@
   library(glue)
   library(extrafont)
   library(tidytext)
-  library(patchwork)
   library(ggtext)
   library(selfdestructin5)
-  library(cascade) # Use dev version
-  library(ggpattern)
-  library(ggtext)
   library(gt)
+  library(gtExtras)
   library(selfdestructin5)
   
   # SI specific paths/functions  
@@ -52,7 +49,8 @@
   df <- read_msd(file_path) %>% 
     fix_mech_names() %>% 
     clean_agency() %>% 
-    swap_targets()
+    swap_targets() %>% 
+    filter(funding_agency == "USAID")
   
   mdb_df   <- make_mdb_df(df)
   mdb_tbl  <- reshape_mdb_df(mdb_df, metadata$curr_pd)  
@@ -101,7 +99,7 @@
       gtsave(path = "Images", filename = glue::glue("{mech_name}_mdb_main.png"))
   }
   
-  #mk_ptr_tbl(df, 82075) 
+  mk_ptr_tbl(df, 82075) 
   mk_ptr_tbl(df, 17413)
   mk_ptr_tbl(df %>% 
                mutate(mech_name = ifelse(str_detect(mech_name, "DISCOVER-H"), "DISCOVER-H", mech_name)), 17399)
@@ -119,7 +117,7 @@
   ip_mdb <- 
     df %>% 
     filter(mech_code == 82086, fiscal_year < 2023) %>% 
-    make_mdb_df() %>% View()
+    make_mdb_df() %>% 
     filter(fiscal_year == metadata$curr_fy, operatingunit == "Global") %>% 
     select(agency, indicator, indicator_plain, qtr1, qtr2, qtr3, qtr4, cumulative, targets) %>% 
     mutate(achv = cumulative / targets) %>% 
