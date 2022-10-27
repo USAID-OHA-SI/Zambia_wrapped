@@ -26,12 +26,13 @@
       pattern = "Genie-PSNUByIMs-Zambia")
       
   # Grab metadata
-   cascade::get_file_metadata()
+   get_metadata(file_path)
   
   # REF ID for plots
     ref_id <- "85d850d1"
     
   # Functions  
+    source("Scripts/99_custom_functions.R")
   
 
 # LOAD DATA ============================================================================  
@@ -51,6 +52,8 @@
       fix_mech_names() %>% 
       mutate(snu1 = str_remove_all(snu1, " Province"))
     
+    
+  # PULLING DOWN ALL OVC DISAGS FOR REVIEW  
   df_ovc <- msd %>% 
     filter(indicator %in% c("OVC_SERV_UNDER_18", "OVC_HIVSTAT", "OVC_SERV",
                             "OVC_SERV_ACTIVE", "OVC_SERV_GRADUATED", "OVC_SERV_OVER_18",
@@ -66,7 +69,7 @@
     fix_mech_names()
     
   
-# VIZ ============================================================================
+# Create Google Sheet ============================================================================
 
   gd_id <- "1r3rwCCUw3FeSeNLBwolmJ9citMilrlT4u_9jpVuUW8Y"  
     

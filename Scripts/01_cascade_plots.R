@@ -69,7 +69,7 @@
 # MUNGE ============================================================================
   
   # All of PEPFAR Zambia cascade
-  return_cascade(df_msd, 1)
+  return_cascade(df_msd, 1) %>% prinf()
   return_cascade(df_msd %>% filter(funding_agency == "USAID"), 1) %>% prinf()
  
   # Generate plots for all agencies
