@@ -54,7 +54,7 @@
   # indic_list <- c("PrEP_NEW", "HTS_TST_POS", "TX_CURR", "TX_NEW", "VLS", "VLC")
   
   df_achv <- df %>% 
-    filter(indicator %in% c("PrEP_NEW", "HTS_TST_POS", "TX_NEW", "TX_CURR"),
+    filter(indicator %in% c("VMMC_CIRC", "PrEP_NEW", "HTS_TST_POS", "TX_NEW", "TX_CURR"),
            standardizeddisaggregate == "Total Numerator", 
            fiscal_year == metadata$curr_fy, 
            funding_agency != "DEDUP") %>% 
@@ -87,7 +87,7 @@
   # Bind'em together so we can plot them in a table
   df_achv_all <- 
     bind_rows(df_achv, df_vl) %>% 
-    mutate(indicator = fct_relevel(indicator, c("PrEP_NEW", "HTS_TST_POS", "TX_CURR", "TX_NEW", "VLS", "VLC"))) %>% 
+    mutate(indicator = fct_relevel(indicator, c("PrEP_NEW","VMMC_CIRC",  "HTS_TST_POS", "TX_CURR", "TX_NEW", "VLS", "VLC"))) %>% 
     arrange(mech_name, indicator)  
     
 # One Take  
@@ -102,14 +102,14 @@
                             "17400", "17422", "18487",
                             "17410", "160806", "18528")) %>% 
     gt() %>% 
-    gt::fmt_markdown(columns = 3:8) %>% 
+    gt::fmt_markdown(columns = 3:9) %>% 
     sub_missing(missing_text = "-") %>% 
-    cols_hide(mech_code) %>% 
+    cols_hide(mech_code) %>%
+    cols_label(mech_name = "") %>% 
     tab_header(
-      title = glue("ZAMBIA MECHANISM PERFORMANCE SUMMARY AS OF FY22Q4"),
-      subtitle = legend_chunk
+      title = glue("ZAMBIA MECHANISM PERFORMANCE SUMMARY AS OF FY22Q4")
     ) %>% 
-    gtsave_extra("Images/USAID_partner_table_achv_ped.png")
+    gtsave_extra("Images/USAID_partner_table_achv_levels.png")
   
 # Standard table w/ colors
   df_ach_all_gt <- df_achv_all %>% 
@@ -177,10 +177,10 @@
   tmp <- df_ach_all_gt %>% 
     gt(groupname_col = "funding_agency") %>% 
     sub_missing(missing_text = "-") %>% 
-    fmt_percent(columns = 3:9, decimals = 0)
+    fmt_percent(columns = 3:10, decimals = 0)
     
   
-  indic_cols <- names(df_ach_all_gt)[4:9]
+  indic_cols <- names(df_ach_all_gt)[4:10]
   for(i in seq_along(indic_cols)){
    tmp <- tmp %>% 
      tab_style(
@@ -226,7 +226,7 @@
     
   tmp %>% 
     tab_header(
-      title = glue("ZAMBIA MECHANISM PERFORMANCE SUMMARY FY22"),
+      title = glue("ZAMBIA MECHANISM PERFORMANCE SUMMARY FOR FY22"),
       subtitle = legend_chunk
     ) %>% 
     tab_source_note(
