@@ -71,7 +71,9 @@
   
   # All of PEPFAR Zambia cascade
   return_cascade(df_msd, 1) %>% prinf()
-  return_cascade(df_msd %>% filter(funding_agency == "USAID"), 1) %>% prinf()
+  return_cascade(df_msd %>% filter(funding_agency == "USAID", 
+                                   mech_name == "SAFE"), 1) %>% 
+    prinf()
  
   # Generate plots for all agencies
   batch_cascade_plot(df_msd, imgpath = "Images/Cascade/All")
@@ -92,6 +94,9 @@
   
   return_cascade(df_msd %>% filter(mech_name == "DISCOVER"), 13) %>% prinf()
   
+
+# USING CASCADE TRENDS ----------------------------------------------------
+
 
   
 # TREATMENT COVERAGE BY PROVINCE ------------------------------------------

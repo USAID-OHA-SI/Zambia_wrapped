@@ -91,7 +91,7 @@
     
     df_tx %>%
       filter(
-        snu1 %in% v_tx_lrg,
+        snu1 %ni% c("Eastern Province", "Southern Province"),
         trendscoarse == "<15") %>% 
       ggplot(aes(period, results, fill = fill_color, alpha = fill_alpha)) +
       geom_col() +
