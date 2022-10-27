@@ -16,7 +16,7 @@
  mech_names_cw <- 
    tibble::tribble(
      ~mech_code, ~mech_name_short,
-        "160806",           "ZIHA",
+        "160806",      "CHECKUPII",
          "17399",       "DISCOVER",
          "17400",   "Eradicate TB",
          "17410",         "Z-CHPP",

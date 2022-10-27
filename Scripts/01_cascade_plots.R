@@ -50,7 +50,8 @@
 
   df_msd <- read_msd(file_path) %>% 
     fix_mech_names() %>% 
-    mutate(snu1 = str_remove_all(snu1, " Province"))
+    mutate(snu1 = str_remove_all(snu1, " Province")) %>% 
+    filter(funding_agency == "USAID")
     
   plhiv <- read_msd(plhiv_path) %>% 
     filter(operatingunit == "Zambia") %>% 
@@ -158,7 +159,7 @@
          title = glue("USAID TX_CURR WAS AT {comma(aid_tx_tot)} IN {metadata$curr_pd}") ,
          caption = metadata$caption) +
     si_style_ygrid()
-  si_save("Images/TX_CURR_summary_by_province.png")
+  si_save("Graphics/TX_CURR_summary_by_province.svg")
   
   tx_snu %>% 
     filter(snu1 %ni% c("Lusaka", "Southern", "Western", "Eastern")) %>% 
@@ -179,7 +180,7 @@
          title = glue("USAID TX_CURR ACHIEVEMENT WAS AT {percent(aid_tx_achv)} IN {metadata$curr_pd}"),
          caption = metadata$caption)
 
-  si_save("Images/TX_CURR_comparison_to_ave.png") 
+  si_save("Graphics/TX_CURR_comparison_to_ave.svg") 
   
 
 # TX_CURR PEDS -------------------------------------------------
@@ -217,7 +218,7 @@
     labs(x = NULL, y = NULL, title = "TX_CURR PEDIATRIC TRENDS BY PARTNER",
          subtitle = "Gray bars are TX_CURR targets",
          caption = metadata$caption) 
-  si_save("Images/TX_CURR_pediatric_trends.png", scale = 1.25)
+  si_save("Graphics/TX_CURR_pediatric_trends.svg", scale = 1.25)
   
 
 # TX_CURR AYP -------------------------------------------------------------
@@ -254,7 +255,7 @@
     labs(x = NULL, y = NULL, title = "TX_CURR AYP (15-24) TRENDS BY PARTNER",
          subtitle = "Gray bars are TX_CURR targets",
          caption = metadata$caption) 
-  si_save("Images/TX_CURR_ayp_trends.png", scale = 1.25)
+  si_save("Graphics/TX_CURR_ayp_trends.svg", scale = 1.25)
   
 # VIRAL LOAD & COVERAGE ---------------------------------------------------
 
@@ -321,7 +322,7 @@
     plot_annotation(title = glue("VIRAL LOAD SUMMARY FOR {metadata$curr_fy}"),
                     caption = metadata$caption)
     
-  si_save("Images/VL_summary_2022.png")
+  si_save("Graphics/VL_summary_2022.svg")
   
   # IP VERSION ON 1 GRAPH using small multiples
   top_ip <- 
@@ -365,7 +366,7 @@
     plot_ip <- top_ip / bottom_ip + plot_layout(heights = c(1, 3)) +
       plot_annotation(title = glue("VIRAL LOAD SUMMARY FOR {metadata$curr_fy} BY PARTNER")) 
     
-    si_save("Images/VL_summary_partner.png")
+    si_save("Graphics/VL_summary_partners.svg")
     
   # VLS trends for peds
     top <- df_vl_peds %>% 
@@ -413,9 +414,9 @@
                size = 8/.pt, family = "Source Sans Pro", color = denim) 
     
     top / bottom + plot_layout(heights = c(1, 3)) +
-      plot_annotation(title = glue("VIRAL LOAD SUMMARY FOR {metadata$curr_fy}"))
+      plot_annotation(title = glue("PEDIATRIC VIRAL LOAD SUMMARY FOR {metadata$curr_fy}"))
     
-    si_save("Images/VL_summary_peds_2022.png")
+    si_save("Graphics/VL_summary_peds_2022.svg")
     
     
 
