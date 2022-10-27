@@ -44,7 +44,8 @@
 
   df_msd <- read_msd(file_path) %>% 
     fix_mech_names() %>% 
-    swap_targets()
+    swap_targets() %>% 
+    filter(funding_agency == "USAID")
 
 
 # HTS MODALITY ------------------------------------------------------------
@@ -53,7 +54,7 @@
     munge_modality(df_msd %>% mutate(mech_code = 123456, mech_name = "USAID"), 
                  mech_code == 123456) %>% 
     plot_modality(.)
-    si_save("Images/Index_testing_summary_by_modality")
+    si_save("Graphics/Index_testing_summary_by_modality.svg")
 
   # Loop over key partners  
   partner_list <- df_msd %>% 
@@ -93,10 +94,6 @@
  
 # VIZ ===========================================================================
 
-
-
-  
-
  # Linkage visual w/ targets
  bottom_hts <- df_linkage %>% 
    ggplot(aes(x = period)) +
@@ -135,7 +132,7 @@
 
  top_hts / bottom_hts +
    plot_layout(heights = c(1, 4))
- si_save("Images/Linkage_summary.png")
+ si_save("Graphics/Linkage_summary.svg")
  
 
 # POSITIVITY --------------------------------------------------------------
@@ -170,7 +167,7 @@
    labs(x = NULL, y = NULL, title = "TESTING POSITIVITY TRENDS",
         caption = metadata$caption)+
    coord_cartesian(expand = F)
- si_save("Images/HTS_positivity_summary.png")
+ si_save("Graphics/HTS_positivity_summary.svg")
 
 # TODO  ============================================================================
 # REPEAT BY IPS
