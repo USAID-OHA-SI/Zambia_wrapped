@@ -37,7 +37,8 @@
 # LOAD DATA ============================================================================  
 
   df_prep <- read_msd(file_path) %>% 
-      filter(indicator == "PrEP_NEW")
+      filter(indicator == "PrEP_NEW",
+             funding_agency == "USAID")
 
 # PREP_NEW AGYW ============================================================================
   
@@ -53,7 +54,7 @@
       group_by(age, indicator, fiscal_year) %>% 
       summarise(across(c(targets, starts_with("cum")), sum, na.rm = TRUE), .groups = "drop") %>% 
       mutate(achv = cumulative / targets,
-             fill_color = ifelse(age == "AGYW (15-24)", golden_sand, "#4076f2"))
+             fill_color = ifelse(age == "AGYW (15-24)", golden_sand, denim))
     
     
     width <- .6  

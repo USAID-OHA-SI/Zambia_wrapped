@@ -28,21 +28,18 @@ library(lubridate)
 
 # GLOBAL VARIABLES --------------------------------------------------------
 ref_id <- "f1292dac"
-genie_path <- return_latest(si_path(), "Genie-PSNUByIMs-Zambia-Daily-2022-10-26")
-
-# msd_source <- source_info(genie_path)
-# curr_pd <- source_info(genie_path, return = "period")
-# curr_fy <- source_info(genie_path, return = "fiscal_year")
-# curr_qtr <- source_info(genie_path, return = "quarter")
+genie_path <- return_latest(si_path(), "Genie-PSNUByIMs-Zambia-Daily")
 
 get_metadata(genie_path)
+
+source("Scripts/99_custom_functions.R")
 
 #indicators used
 # c("HTS_TST_POS", "OVC_SERV", "PMTCT_EID", "TB_PREV", "TB_STAT", "TB_STAT_POS", "TX_CURR", "TX_CURR_Lag1", "TX_CURR_Lag2", "TX_ML", "TX_NET_NEW", "TX_NEW", "TX_PVLS", "TX_PVLS", "TX_PVLS_D")
 
 # IMPORT ------------------------------------------------------------------
 
-df <- read_msd(genie_path) %>% filter(operatingunit == "Zambia")
+df <- read_msd(genie_path) %>% filter(operatingunit == "Zambia", funding_agency == "USAID")
 
 full_pds <- (min(df$fiscal_year) - 1) %>% 
   paste0("-10-01") %>% 
@@ -51,14 +48,6 @@ full_pds <- (min(df$fiscal_year) - 1) %>%
   convert_date_to_qtr()
 
 pd_brks <- str_replace(full_pds, "FY.*(1|3)$", "")
-
-# swap_targets <- function(.data, mech1 = "18304", mech2 = "82075") {
-#   # Using EQUIP as default as this has to be done each time in FY21
-#   .data %>%
-#     mutate(mech_code = ifelse(mech_code == {{mech1}}, {{mech2}}, mech_code),
-#            mech_name = ifelse(mech_code == {{mech2}}, "Action HIV", mech_name))
-# }
-
 
 # Function to group and sum
 group_sum <- function(.data, ...){
