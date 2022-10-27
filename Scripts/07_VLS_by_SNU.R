@@ -31,18 +31,18 @@
     load_secrets()
     merdata <- file.path(glamr::si_path("path_msd"))
     file_path <- return_latest(folderpath = merdata,
-                             pattern = "SiteByIMs-Zambia-Daily-2022-10-26.zip")
+                             pattern = "Genie-PSNUByIMs-Zambia")
   
   # REF ID for plots
     ref_id <- "77b30310"
     
   # Grab metadata
     get_metadata(file_path) 
-  
+    source("Scripts/99_custom_functions.R")
 
 # LOAD DATA ============================================================================  
 
-  df_site <- read_msd(file_path)
+  df_site <- read_msd(file_path) %>% filter(funding_agency == "USAID")
 
 # MUNGE ============================================================================
     
@@ -119,5 +119,5 @@
             strip.text = element_markdown(),
             axis.text.x = element_blank()) 
     
-    si_save("Images/VLC_VLS_by_province.png")
+    si_save("Graphics/VLC_VLS_by_province.svg")
  
