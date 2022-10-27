@@ -253,7 +253,7 @@
      plot_modality(.)
    
    if(export == TRUE)
-     si_save(glue("Images/HTS_modality_{mech_name}.png"))
+     si_save(glue("Graphics/HTS_modality_{mech_name}.svg"))
  }
  
 

@@ -32,8 +32,6 @@
   file_path <- return_latest(folderpath = merdata,
                              pattern = "Genie-PSNUByIMs-Zambia")
   
-  plhiv_path <- return_latest(folderpath = merdata,
-                              pattern = "SUBNAT")
 
   # REF ID for plots
   ref_id <- "98614ee3"  
@@ -49,7 +47,8 @@
 
   df <- read_msd(file_path) %>% 
     fix_mech_names() %>% 
-    clean_agency()
+    clean_agency() %>% 
+    filter(funding_agency == "USAID")
   
   # Looking for a ACHV table by IP across the following
   # indic_list <- c("PrEP_NEW", "HTS_TST_POS", "TX_CURR", "TX_NEW", "VLS", "VLC")
@@ -105,7 +104,12 @@
     gt() %>% 
     gt::fmt_markdown(columns = 3:8) %>% 
     sub_missing(missing_text = "-") %>% 
-    cols_hide(mech_code)
+    cols_hide(mech_code) %>% 
+    tab_header(
+      title = glue("ZAMBIA MECHANISM PERFORMANCE SUMMARY AS OF FY22Q4"),
+      subtitle = legend_chunk
+    ) %>% 
+    gtsave_extra("Images/USAID_partner_table_achv_ped.png")
   
 # Standard table w/ colors
   df_ach_all_gt <- df_achv_all %>% 
@@ -170,13 +174,13 @@
 # CREATE GT TABLES --------------------------------------------------------
 
       
-  tmp <- df_achv_pedsl %>% 
+  tmp <- df_ach_all_gt %>% 
     gt(groupname_col = "funding_agency") %>% 
     sub_missing(missing_text = "-") %>% 
     fmt_percent(columns = 3:9, decimals = 0)
     
   
-  indic_cols <- names(df_achv_pedsl)[4:9]
+  indic_cols <- names(df_ach_all_gt)[4:9]
   for(i in seq_along(indic_cols)){
    tmp <- tmp %>% 
      tab_style(
@@ -190,7 +194,7 @@
        style = cell_fill(color = "#ffcaa2", alpha = 0.75),
        locations = cells_body(
          columns = indic_cols[i],
-         rows = tmp$`_data`[[indic_cols[i]]] >= 0.75 &  tmp$`_data`[[indic_cols[i]]] <= 0.89
+         rows = tmp$`_data`[[indic_cols[i]]] >= 0.75 &  tmp$`_data`[[indic_cols[i]]] < 0.9
        )
      ) %>% 
      tab_style(
@@ -222,7 +226,7 @@
     
   tmp %>% 
     tab_header(
-      title = glue("ZAMBIA MECHANISM PERFORMANCE SUMMARY PEDIATRICS"),
+      title = glue("ZAMBIA MECHANISM PERFORMANCE SUMMARY FY22"),
       subtitle = legend_chunk
     ) %>% 
     tab_source_note(
@@ -235,7 +239,7 @@
     cols_label(mech_name = "", 
                mech_code = "") %>% 
     cols_hide(mech_code) %>% 
-    gtsave_extra("Images/USAID_summary_table_achv_ped.png")
+    gtsave_extra("Images/USAID_summary_table_achv.png")
 
     
   
