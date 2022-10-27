@@ -31,7 +31,7 @@
     load_secrets()
     merdata <- file.path(glamr::si_path("path_msd"))
     file_path <- return_latest(folderpath = merdata,
-                             pattern = "SiteByIMs-Zambia-Daily-2022-10-26.zip")
+                             pattern = "SiteByIMs-Zambia-Daily")
   
   # REF ID for plots
     ref_id <- "77b30310"
@@ -42,11 +42,11 @@
 
 # LOAD DATA ============================================================================  
 
-  df_site <- read_msd(file_path)
+  df_site <- read_msd(file_path) %>% 
+      filter(funding_agency == "USAID")
   
 
 # PERIODS -----------------------------------------------------------------
-
     
     full_pds <- (min(df_site$fiscal_year) - 1) %>% 
       paste0("-10-01") %>% 
@@ -137,7 +137,8 @@
   
     df_iit %>% 
       filter(tx_curr_lag1 != 0, 
-             trendscoarse == "15+") %>% 
+             trendscoarse == "15+", 
+             snu1 %ni% c("Eastern Province", "Southern Province")) %>% 
       mutate(snu1 = factor(snu1, v_tx_lrg)) %>% 
       filter(!is.na(snu1)) %>% 
       ggplot(aes(period, iit, size = tx_curr_lag1)) +
