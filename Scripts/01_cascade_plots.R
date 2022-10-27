@@ -71,8 +71,7 @@
   
   # All of PEPFAR Zambia cascade
   return_cascade(df_msd, 1) %>% prinf()
-  return_cascade(df_msd %>% filter(funding_agency == "USAID", 
-                                   mech_name == "SAFE"), 1) %>% 
+  return_cascade(df_msd %>% filter(funding_agency == "USAID"), 1) %>% 
     prinf()
  
   # Generate plots for all agencies
@@ -97,7 +96,39 @@
 
 # USING CASCADE TRENDS ----------------------------------------------------
 
-
+  df_spark <- return_cascade(df_msd %>% filter(funding_agency == "USAID", 
+                                               mech_name == "ACTION HIV"), 1)
+  
+  df_spark %>% 
+    mutate(start_point = case_when(
+      period == min(period) ~ 1,
+      TRUE ~ 0
+    ),
+      end_point = case_when(
+        period == max(period) ~ 1,
+        TRUE ~ 0
+      ),
+    ends = ifelse(start_point == 1 | end_point == 1, 1, 0)
+    ) %>% 
+    filter(indicator != "TX_CURR_Lag2") %>% 
+    ggplot(aes(x = period, y = results, group = indicator)) +
+    geom_line(size = 0.75, color = grey70k) +
+    geom_point(data = . %>% filter(end_point == 1), shape = 19, color = grey80k, size = 3) +
+    geom_point(data = . %>% filter(end_point == 0), shape = 19, color = grey80k, size = 1.5) +
+    geom_text(data = . %>% filter(ends == 1), aes(label = label_number_si(accuracy = 1)(results), 
+                                                  vjust = -1, size = 12/.pt, 
+                                                  family = "Source Sans Pro"))+
+    facet_wrap(~indicator, ncol = 2, scales = "free_y") +
+    si_style_nolines() +
+    scale_y_continuous(labels =  label_number_si(), expand = c(0.5, 0.5)) +
+    labs(x = NULL, y = NULL,
+         title = "CASCADE TRENDS FOR FY22 FOR ACTION HIV",
+         caption = glue("{metadata$caption}")) +
+    scale_x_discrete(expand = c(0.05, 0)) +
+    theme(axis.text.y = element_blank(), 
+          strip.text = element_text(size = 15),
+          legend.position  = "none")
+  si_save("Images/USAID_cascade_trends_ACTION.png", scale = 1.25)
   
 # TREATMENT COVERAGE BY PROVINCE ------------------------------------------
 
