@@ -9,8 +9,8 @@
 # LOCALS & SETUP ============================================================================
 
   # Install dev version of cascade and gophr
-  remotes::install_github("USAID-OHA-SI/gophr", "09ada4c")
-  remotes::install_github("USAID-OHA-SI/cascade", ref = "dev")
+  # remotes::install_github("USAID-OHA-SI/gophr", "09ada4c")
+  # remotes::install_github("USAID-OHA-SI/cascade", ref = "dev")
 
   # Libraries
     library(gagglr)
@@ -78,17 +78,17 @@
     
   # Generate plots for just USAID
   batch_cascade_plot(df_msd %>% filter(funding_agency == "USAID"),
-                     imgpath = "Images/Cascade/USAID")
+                     imgpath = "Images/Cascade/USAID", imgtype =".svg")
   
   # Loop over mechs
   batch_cascade_plot(df_msd %>% filter(mech_name == "DISCOVER"),
-                     imgpath = "Images/Cascade/DISCOVER")
+                     imgpath = "Images/Cascade/DISCOVER", imgtype =".svg")
   
   batch_cascade_plot(df_msd %>% filter(mech_name == "SAFE"),
-                     imgpath = "Images/Cascade/SAFE")
+                     imgpath = "Images/Cascade/SAFE", imgtype =".svg")
   
   batch_cascade_plot(df_msd %>% filter(mech_name == "ACTION HIV"),
-                     imgpath = "Images/Cascade/ACTION_HIV")
+                     imgpath = "Images/Cascade/ACTION_HIV", imgtype =".svg")
   
   return_cascade(df_msd %>% filter(mech_name == "DISCOVER"), 13) %>% prinf()
   
