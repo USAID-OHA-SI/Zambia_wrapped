@@ -71,7 +71,7 @@
   
   # All of PEPFAR Zambia cascade
   return_cascade(df_msd, 1) %>% prinf()
-  return_cascade(df_msd %>% filter(funding_agency == "USAID"), 1) %>% 
+  return_cascade(df_msd %>% filter(funding_agency == "USAID", mech_code == 82075), 1) %>% 
     prinf()
  
   # Generate plots for all agencies
@@ -97,7 +97,7 @@
 # USING CASCADE TRENDS ----------------------------------------------------
 
   df_spark <- return_cascade(df_msd %>% filter(funding_agency == "USAID", 
-                                               mech_name == "ACTION HIV"), 1)
+                                               mech_name == "ACTION HIV"), 1) %>% 
   
   df_spark %>% 
     mutate(start_point = case_when(

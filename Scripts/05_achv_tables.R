@@ -26,7 +26,8 @@
   load_secrets()
   merdata <- file.path(glamr::si_path("path_msd"))
   file_path <- return_latest(folderpath = merdata,
-                             pattern = "Genie-PSNUByIMs-Zambia")
+                             pattern = "Genie-PSNUByIMs-MultipleOUs-Daily-")
+  #pattern = "Genie-PSNUByIMs-Zambia")
 
   # REF ID for plots
   ref_id <- "98614ee3"  
@@ -49,9 +50,9 @@
   df <- read_msd(file_path) %>% 
     fix_mech_names() %>% 
     clean_agency() %>% 
-    swap_targets() %>% 
-    filter(funding_agency == "USAID")
-  
+    swap_targets() 
+    # filter(funding_agency == "USAID")
+    # 
   mdb_df   <- make_mdb_df(df)
   mdb_tbl  <- reshape_mdb_df(mdb_df, metadata$curr_pd)  
   
