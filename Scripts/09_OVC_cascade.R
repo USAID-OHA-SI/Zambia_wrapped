@@ -96,6 +96,7 @@ df_tx <-
   df %>% 
   filter(indicator %in% c("TX_CURR"), 
          standardizeddisaggregate %in% c("Age/Sex/ARVDispense/HIVStatus"), 
+         #standardizeddisaggregate %in% c("Age/Sex/HIVStatus"), 
          fiscal_year == metadata$curr_fy, 
          trendscoarse == "<15"
   ) %>% 
