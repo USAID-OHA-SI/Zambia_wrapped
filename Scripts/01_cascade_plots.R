@@ -97,7 +97,11 @@
 # USING CASCADE TRENDS ----------------------------------------------------
 
   df_spark <- return_cascade(df_msd %>% filter(funding_agency == "USAID", 
-                                               mech_name == "ACTION HIV"), 1) %>% 
+                                               mech_name == "SAFE"), 7) %>%
+    mutate(results = case_when(
+    indicator == "TX_NET_NEW" & period == "FY22Q1" ~ 0,
+    TRUE ~ results
+    ))
   
   df_spark %>% 
     mutate(start_point = case_when(
@@ -109,16 +113,33 @@
         TRUE ~ 0
       ),
     ends = ifelse(start_point == 1 | end_point == 1, 1, 0)
-    ) %>% 
+    ) %>% group_by(indicator) %>% 
+    mutate(min_results = min(results),
+           indic_colors = dplyr::case_when(indicator == "HTS_TST" ~ "#877ec9", 
+                                           indicator == "HTS_TST_POS" ~ "#b5aaf9", 
+                                           indicator == "TX_NEW" ~ glitr::golden_sand_light, 
+                                           indicator == "TX_NET_NEW" ~ glitr::golden_sand_light, 
+                                           indicator == "TX_CURR" ~ glitr::golden_sand, 
+                                           indicator == "TX_PVLS_D" ~ glitr::scooter_med, 
+                                           indicator == "TX_PVLS" ~ glitr::scooter),
+           indic_group = case_when(
+             indicator %in% c("HTS_TST", "HTS_TST_POS") ~ "Testing",
+             indicator %in% c("TX_CURR", "TX_NEW", "TX_NET_NEW") ~ "Treatment",
+             indicator %in% c("TX_PVLS", "TX_PVLS_D") ~ "Viral Load"
+            )
+           ) %>% 
+    ungroup() %>% 
     filter(indicator != "TX_CURR_Lag2") %>% 
     ggplot(aes(x = period, y = results, group = indicator)) +
+    geom_ribbon(aes(ymin = min_results, ymax = results, fill = indic_colors), alpha = 0.25) +
     geom_line(size = 0.75, color = grey70k) +
     geom_point(data = . %>% filter(end_point == 1), shape = 19, color = grey80k, size = 3) +
     geom_point(data = . %>% filter(end_point == 0), shape = 19, color = grey80k, size = 1.5) +
     geom_text(data = . %>% filter(ends == 1), aes(label = label_number_si(accuracy = 1)(results), 
                                                   vjust = -1, size = 12/.pt, 
                                                   family = "Source Sans Pro"))+
-    facet_wrap(~indicator, ncol = 2, scales = "free_y") +
+
+    facet_wrap(~indicator, scales = "free_y", ncol = 2) +
     si_style_nolines() +
     scale_y_continuous(labels =  label_number_si(), expand = c(0.5, 0.5)) +
     labs(x = NULL, y = NULL,
@@ -127,7 +148,8 @@
     scale_x_discrete(expand = c(0.05, 0)) +
     theme(axis.text.y = element_blank(), 
           strip.text = element_text(size = 15),
-          legend.position  = "none")
+          legend.position  = "none") +
+    scale_fill_identity()
   si_save("Images/USAID_cascade_trends_ACTION.png", scale = 1.25)
   
 # TREATMENT COVERAGE BY PROVINCE ------------------------------------------
@@ -255,6 +277,137 @@
          subtitle = "Gray bars are TX_CURR targets",
          caption = metadata$caption) 
   si_save("Graphics/TX_CURR_pediatric_trends.svg", scale = 1.25)
+
+
+# TX_CURR PEDS AND PSNU ---------------------------------------------------
+
+  tx_curr_peds_psnu <- df_msd %>%
+    swap_targets() %>% 
+    mutate(mech_name = str_to_upper(mech_name)) %>% 
+    clean_psnu() %>% 
+    filter(funding_agency == "USAID",
+           indicator == "TX_CURR",
+           standardizeddisaggregate == "Age/Sex/HIVStatus",
+           trendscoarse == "<15") %>%
+    group_by(mech_name, fiscal_year, indicator, psnu, snu1, mech_code) %>%
+    summarise(across(matches("targ|qtr"), sum, na.rm = T), .groups = "drop") %>%
+    reshape_msd(direction = "quarters") %>% 
+    mutate(achv = results_cumulative / targets,
+           qtr_flag = ifelse(str_detect(period, "Q4"), 1, 0),
+           mech_name = fct_relevel(mech_name,
+                                   c("SAFE", "ACTION HIV", "DISCOVER", "ZAM HEALTH")),
+           sort_var = case_when(
+             period == max(period) ~ results_cumulative,
+           )
+          ) %>%
+    group_by(mech_code, psnu) %>% 
+    fill(sort_var, .direction = "up") %>% 
+    ungroup() %>%
+    group_by(mech_code, snu1) %>%
+    mutate(psnu_order = reorder_within(psnu, sort_var, mech_name)) %>%
+    ungroup() %>% 
+    group_by(mech_code) %>%
+    mutate(snu1_order = fct_reorder(snu1, results_cumulative, .fun = sum, .desc = T)) %>%
+    ungroup()  
+    
+    # TRY A SLOPE PLOT, connecting results across years
+    # Set a new value that is 1.2 x the value of Q4 results to show achv
+    # Calculate 1/2 point between targets and results for placement of achievement
+  tx_peds_slope <- function(mech, export = T){
+    tx_curr_peds_psnu %>% 
+    filter(qtr_flag == 1, mech_name == mech) %>% 
+    mutate(tex_pos = case_when(
+      period == min(period) ~ 0.8,
+      TRUE ~ 2.2
+      ),
+      achv_pos = case_when(
+        period == max(period) ~ results * 1.15,
+        TRUE ~ NA_real_
+      ),
+      psnu = fct_reorder(psnu, results, .desc = T)
+    ) %>% 
+      adorn_achievement() %>% 
+    mutate(achv_lab_pos = abs(targets + results)/2) %>% 
+    ggplot(aes(group = psnu, x = period)) +
+    geom_ribbon(aes(ymin = results, ymax = targets), fill = grey10k, alpha = 0.25) +
+    geom_linerange(aes(ymin = results, ymax = targets,
+                       color = ifelse(results > targets, grey10k, grey10k)), 
+                   size = 3) +
+    #geom_line(aes(y = targets), color = grey80k, linetype = "dotted") +
+    #geom_line(aes(y = results), color = grey80k) +
+    geom_errorbar(aes(ymin = targets, ymax = targets), size = 0.75, width = 0.1, color = grey80k)+
+    #geom_point(aes(y = targets), size = 3, color = grey60k, shape = 15) +
+    geom_point(aes(y = results), color = "#6B7B8D", size = 4) +
+    geom_text(aes(y = targets, label = label_number_si()(targets), x = tex_pos), 
+              size = 8/.pt, family = "Source Sans Pro", 
+              color = grey90k) +
+    geom_text(aes(y = results, label = label_number_si()(results), x = tex_pos), 
+              size = 8/.pt, family = "Source Sans Pro", color = "#6B7B8D") +
+    geom_label(data = . %>% filter(period == max(period)), 
+                                  aes(y = achv_lab_pos, 
+                                      label = percent(achv, 1), 
+                                      x = tex_pos,
+                                      fill = achv_color,
+                                      color = ifelse((results/targets) >= 0.9, grey90k, "white")), 
+              size = 7/.pt, family = "Source Sans Pro",
+              label.size = NA)+
+    # ggrepel:geom_text_repel(aes(y = results, label = percent(achv, 1)), size = 8/.pt, 
+                  # family = "Source Sans Pro") +
+    # facet_grid(snu1_order~psnu_order, scales = "free", space = "free") +
+    facet_wrap(~psnu, scales = "free") +
+    scale_color_identity() +
+    scale_fill_identity() +
+    scale_y_continuous(expand = c(0.1, 0))+
+    si_style_nolines(facet_space = 0.5) +
+    theme(axis.text.y = element_blank(), 
+          axis.text.x = element_text(size = 7, color = grey90k)) +
+    labs(x = NULL, y = NULL, 
+         title = glue("{mech} PEDIATRIC TX_CURR TARGETS AND RESULTS COMPARISON BY PSNU"),
+         caption = glue("{metadata$caption}"))
+    
+    # if(export == TRUE)
+    #     si_save(glue("Graphics/{metadata$curr_pd}_{mech}_TX_CURR_PSNU_PEDS.svg"), scale = 1.33)
+  }
+  
+  
+  mech_list <- c("SAFE", "ACTION HIV", "DISCOVER", "ZAM HEALTH")
+  map(mech_list, ~tx_peds_slope(.x)) 
+    
+  tx_peds_slope("DISCOVER", export = F)
+  
+  
+tx_psnu_peds_plot <- function(mech, export = T){
+ ip_name <- mech
+  tx_curr_peds_psnu %>%
+    # filter(period == "FY22Q4", mech_name == "SAFE") %>%
+    filter(qtr_flag == 1, mech_name == mech) %>% 
+    ggplot(aes(y = psnu_order)) +
+    geom_col(aes(x = targets), fill = grey10k) +
+    geom_col(aes(x = results_cumulative), fill = scooter) +
+    geom_text(aes(x = results_cumulative, label = percent(achv, 1)),
+              family = "Source Sans Pro",
+              size = 9/.pt,
+              hjust = -0.5) +
+    facet_grid(~snu1_order ~ period, scales = "free_y", switch = "y", space = "free" )+
+    si_style_xgrid(facet_space = 0.5) +
+    scale_y_reordered() +
+    scale_x_continuous(labels = comma, 
+                       expand = expansion(mult = c(0, .05)))+
+    theme(strip.text.y.left = element_text(angle = 0),
+          strip.placement = "outside", 
+          strip.text.x = element_text(face = "bold")) +
+   expand_limits(x = c(-0.1, 0)) +
+    labs(x = NULL, y = NULL, 
+         title = glue("{ip_name} TX_CURR ACHIEVEMENT COMPARISON FY21 TO FY22 FOR PEDIATRICS"),
+         caption = glue("{metadata$caption}")
+         )
+  
+    if(export == TRUE)
+      si_save(glue("Images/{metadata$curr_pd}_{ip_name}_TX_CURR_PSNU_PEDS.png"))
+  }
+
+mech_list <- c("SAFE", "ACTION HIV", "DISCOVER", "ZAM HEALTH")
+map(mech_list, ~tx_psnu_peds_plot(.x))
   
 
 # TX_CURR AYP -------------------------------------------------------------
