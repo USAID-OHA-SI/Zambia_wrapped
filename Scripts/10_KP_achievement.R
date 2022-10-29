@@ -72,9 +72,9 @@
     
     df_kp_viz  <- 
       df_kp %>% 
-      bind_rows(., df_kp %>% mutate(otherdisaggregate = "ALL KPs")) %>% 
+      #bind_rows(., df_kp %>% mutate(otherdisaggregate = "ALL KPs")) %>% 
       filter(indicator != "PrEP_CT", otherdisaggregate != "PWID") %>% 
-      munge_kp() %>% 
+      munge_kp(mech_code, mech_name) %>% 
       mutate(indicator = fct_relevel(indicator, c("KP_PREV", "HTS_TST", "HTS_TST_POS", "HTS_TST_NEG", "PrEP_NEW")),
              indic_color = case_when(
                indicator == "KP_PREV" ~ "#88CCEE",
@@ -87,7 +87,8 @@
 # VIZ ============================================================================
 
     df_kp_viz %>% 
-      filter(otherdisaggregate == "ALL KPs") %>%
+      # filter(otherdisaggregate == "ALL KPs") %>%
+      filter(str_detect(mech_name, ("ACTION HIV|CHECKUPII"), negate = T)) %>% 
       ggplot(aes(y = indicator)) +
       geom_col(aes(x = targets), fill = grey20k, 
                position = position_nudge(y = -0.15), width = 0.5) +
@@ -101,13 +102,42 @@
                 size = 10/.pt, 
                 family = "Source Sans Pro", 
                 hjust = 0) +
-      facet_wrap(~otherdisaggregate, ncol = 5) +
+      # facet_wrap(mech_name~otherdisaggregate, ncol = 5) +
+      facet_grid(mech_name ~ otherdisaggregate, scales = "free_y", space = "free") +
       si_style_xgrid(facet_space = 1.1) +
       scale_fill_identity() +
       scale_y_discrete(limits = rev) +
       scale_x_continuous(labels = label_number_si(), position = "top", expand = c(0.15, 0.1)) +
-      labs(x = NULL, y = NULL, title = str_to_upper("Key Populations Achievements for FY22"),
-           caption = metadata$caption) +
+      labs(x = NULL, y = NULL, title = str_to_upper("Total KP Achievements for FY22"))+
+           #caption = metadata$caption) +
+      theme(
+        strip.placement = "outside",
+        strip.text = element_text(face = "bold")
+      )
+    
+    
+    df_kp_viz %>% 
+      filter(str_detect(mech_name, ("DISCOVER|CHEKUP|Open"))) %>% 
+      ggplot(aes(y = indicator)) +
+      geom_col(aes(x = targets), fill = grey20k, 
+               position = position_nudge(y = -0.15), width = 0.5) +
+      geom_col(aes(x = cumulative, fill = indic_color), width = 0.5) +
+      geom_errorbar(aes(xmax=targets, xmin=targets), 
+                    width=0.75, 
+                    size = 0.75, 
+                    color= "#ffffff", 
+                    linetype = "dotted") +
+      geom_text(aes(x = cumulative, label = percent(achv, 1)), 
+                size = 10/.pt, 
+                family = "Source Sans Pro", 
+                hjust = 0) +
+      facet_grid(mech_name ~ otherdisaggregate, scales = "free_y", space = "free") +
+      si_style_xgrid(facet_space = 1.1) +
+      scale_fill_identity() +
+      scale_y_discrete(limits = rev) +
+      scale_x_continuous(labels = label_number_si(), position = "top", expand = c(0.15, 0.1)) +
+      labs(x = NULL, y = NULL, title = str_to_upper("Total KP Achievements for FY22"))+
+      #caption = metadata$caption) +
       theme(
         strip.placement = "outside",
         strip.text = element_text(face = "bold")
@@ -115,3 +145,7 @@
 
 # SPINDOWN ============================================================================
 
+    top / bottom %>% 
+      si_save(glue("Graphics/{metadata$curr_fy}KP_achv.svg"))
+
+              
