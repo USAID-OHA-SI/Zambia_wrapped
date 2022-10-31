@@ -25,6 +25,7 @@
     library(ggpattern)
     library(fontawesome)
     library(lubridate)
+    library(gtExtras)
 
 
   # SI specific paths/functions  
@@ -63,6 +64,7 @@
              indicator == "TX_CURR",
              standardizeddisaggregate == "Age/Sex/HIVStatus") %>% 
       group_by(indicator, fiscal_year, trendscoarse, snu1) %>% 
+      group_by(indicator, fiscal_year, trendscoarse, snu1) %>%
       summarise(across(c(targets, starts_with("qtr")), sum, na.rm = TRUE), .groups = "drop") %>% 
       reshape_msd("quarters") %>% 
       select(-results_cumulative)
@@ -120,12 +122,13 @@
 # IIT ---------------------------------------------------------------------
     
     df_iit <- df_site %>% 
+      swap_targets() %>% 
       filter(funding_agency == "USAID",
              indicator %in% c("TX_ML", "TX_CURR", "TX_NEW", "TX_CURR_Lag1", "TX_RTT"), 
              #count(indicator, standardizeddisaggregate) %>% view()
              standardizeddisaggregate %in% c("Age/Sex/HIVStatus", "Age/Sex/ARTNoContactReason/HIVStatus")) %>% 
-      # group_by(fiscal_year, indicator) %>%
-      group_by(fiscal_year, snu1, trendscoarse, facility, facilityuid, indicator) %>% 
+      group_by(fiscal_year, indicator) %>%
+      #group_by(fiscal_year, snu1, trendscoarse, facility, facilityuid, indicator) %>% 
       #group_by(fiscal_year, snu1, facility, facilityuid, indicator, mech_code, mech_name, psnu) %>% 
       summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop") %>% 
       reshape_msd(include_type = FALSE) %>% 
@@ -135,6 +138,22 @@
       mutate(iit = tx_ml / sum(tx_curr_lag1, tx_new, na.rm = TRUE)) %>% 
       ungroup()
   
+    df_iit_mech <- df_site %>% 
+      swap_targets() %>% 
+      fix_mech_names() %>% 
+      filter(funding_agency == "USAID",
+             indicator %in% c("TX_ML", "TX_CURR", "TX_NEW", "TX_CURR_Lag1", "TX_RTT"), 
+             #count(indicator, standardizeddisaggregate) %>% view()
+             standardizeddisaggregate %in% c("Age/Sex/HIVStatus", "Age/Sex/ARTNoContactReason/HIVStatus")) %>% 
+      group_by(fiscal_year, indicator, mech_name) %>%
+      summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop") %>% 
+      reshape_msd(include_type = FALSE) %>% 
+      pivot_wider(names_from = "indicator",
+                  names_glue = "{tolower(indicator)}") %>% 
+      rowwise() %>% 
+      mutate(iit = tx_ml / sum(tx_curr_lag1, tx_new, na.rm = TRUE)) %>% 
+      ungroup()
+    
     df_iit %>% 
       filter(tx_curr_lag1 != 0, 
              trendscoarse == "15+", 
@@ -167,9 +186,119 @@
     
     si_save("Images/IIT_adult_decline_snu1.png")
   
-# VIZ ============================================================================
+# IIT Table by Mech / Partner ============================================================================
 
-  #  
+  df_iit_spark <- 
+      df_iit %>% 
+      filter(str_detect(snu1, "Lusaka|Eastern|Southern|Eastern", negate = T)) %>% 
+      select(period, snu1, iit) %>% 
+      arrange(snu1, period) %>% 
+      group_by(snu1) %>% 
+      summarize(spark_iit = list(iit), .groups = "drop") 
+    
+    
+    df_iit %>% 
+      filter(str_detect(snu1, "Lusaka|Eastern|Southern|Eastern", negate = T)) %>% 
+      select(period, snu1, iit) %>%
+      spread(period, iit) %>% 
+      left_join(., df_iit_spark) %>% 
+      gt() %>%
+      gt_plt_sparkline(spark_iit, 
+                       same_limit = , type = "shaded", 
+                       fig_dim = c(10, 30),
+                       palette = c(grey70k, grey90k, old_rose_light, scooter_med, grey10k),
+                       label = F) %>% 
+      fmt_percent(columns = where(is.numeric)) %>% 
+      cols_label(snu1 = "",
+                 spark_iit = "",
+                 FY21Q1 = "Q1",
+                 FY21Q2 = "Q2",
+                 FY21Q3 = "Q3",
+                 FY21Q4 = "Q4",
+                 FY22Q1 = "Q1",
+                 FY22Q2 = "Q2",
+                 FY22Q3 = "Q3",
+                 FY22Q4 = "Q4"
+                 ) %>% 
+      tab_header(
+        title = glue("INTERRUPTION IN TREATMENT SUMMARY BY PROVINCE"),
+      ) %>% 
+      tab_spanner(
+        label = "FY21",
+        columns = 2:5
+      ) %>% 
+      tab_spanner(
+        label = "FY22",
+        columns = 6:9
+      ) %>% 
+      tab_source_note(
+        source_note = gt::md(glue("IIT = TX_ML / TX_CURR_LAG1 + TX_NEW; ITT capped to 25%\n
+                        Source: {metadata$source}"))) %>% 
+      tab_options(
+        source_notes.font.size = px(10)) %>% 
+      gt_theme_nytimes() %>% 
+    gtsave_extra("Images/USAID_iit_province.png")
+    
+    
+    
+    mtcars %>%
+      dplyr::group_by(cyl) %>%
+      # must end up with list of data for each row in the input dataframe
+      dplyr::summarize(mpg_data = list(mpg), .groups = "drop") %>%
+      gt() %>%
+      gt_plt_sparkline(mpg_data)
 
+
+# MECH TABLE --------------------------------------------------------------
+
+    df_iit_spark_mech <- 
+      df_iit_mech %>% 
+      select(period, mech_name, iit) %>% 
+      arrange(mech_name, period) %>% 
+      group_by(mech_name) %>% 
+      summarize(spark_iit = list(iit), .groups = "drop")     
+    
+    df_iit_mech %>% 
+      select(period, mech_name, iit) %>%
+      spread(period, iit) %>% 
+      left_join(., df_iit_spark_mech) %>% 
+      gt() %>%
+      gt_plt_sparkline(spark_iit, 
+                       same_limit = , type = "shaded", 
+                       fig_dim = c(15, 30),
+                       palette = c(grey70k, grey90k, old_rose_light, scooter_med, grey10k),
+                       label = F) %>% 
+      fmt_percent(columns = where(is.numeric)) %>% 
+      cols_label(mech_name = "",
+                 spark_iit = "",
+                 FY21Q1 = "Q1",
+                 FY21Q2 = "Q2",
+                 FY21Q3 = "Q3",
+                 FY21Q4 = "Q4",
+                 FY22Q1 = "Q1",
+                 FY22Q2 = "Q2",
+                 FY22Q3 = "Q3",
+                 FY22Q4 = "Q4"
+      ) %>% 
+      tab_header(
+        title = glue("INTERRUPTION IN TREATMENT SUMMARY BY MECHANISM"),
+      ) %>% 
+      tab_spanner(
+        label = "FY21",
+        columns = 2:5
+      ) %>% 
+      tab_spanner(
+        label = "FY22",
+        columns = 6:9
+      ) %>% 
+      fmt_missing(columns = everything(), missing_text = "-") %>% 
+      tab_source_note(
+        source_note = gt::md(glue("IIT = TX_ML / TX_CURR_LAG1 + TX_NEW; ITT capped to 25%\n
+                        Source: {metadata$source}"))) %>% 
+      tab_options(
+        source_notes.font.size = px(10)) %>% 
+      gt_theme_nytimes() %>% 
+      gtsave_extra("Images/USAID_iit_mech.png")
+    
 # SPINDOWN ============================================================================
 
