@@ -23,7 +23,7 @@
     load_secrets()
     merdata <- file.path(glamr::si_path("path_msd"))
     file_path <- return_latest(folderpath = merdata,
-                               pattern = "Genie-PSNUByIMs-MultipleOUs-Daily-")
+                               pattern = "PSNUByIMs-Zambia-Daily-2022-11-02.zip")
       #pattern = "Genie-PSNUByIMs-Zambia")
       
   # Grab metadata
@@ -87,7 +87,7 @@
       relocate(targets, .after = qtr4) %>%
       googlesheets4::sheet_write(ss = gd_id, sheet = "KP_data")
 
-  ==df_ovc %>% 
+  df_ovc %>% 
     group_by(mech_code, mech_name, fiscal_year, indicator, otherdisaggregate, standardizeddisaggregate) %>% 
     summarise(across(matches("targ|qtr"), sum, na.rm = T)) %>% 
     relocate(targets, .after = qtr4) %>% 
