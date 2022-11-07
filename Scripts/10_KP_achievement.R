@@ -34,6 +34,7 @@
     ref_id <- "8cdaebb9"
     
   # Functions  
+    source("Scripts/99_custom_functions.R")
   
 
 # LOAD DATA ============================================================================  
@@ -88,7 +89,8 @@
 
     df_kp_viz %>% 
       # filter(otherdisaggregate == "ALL KPs") %>%
-      filter(str_detect(mech_name, ("ACTION HIV|CHECKUPII"), negate = T)) %>% 
+      #filter(str_detect(mech_name, ("ACTION HIV|CHECKUPII"), negate = T)) %>% 
+      mutate(cumulative = na_if(cumulative, NA_integer_)) %>% 
       ggplot(aes(y = indicator)) +
       geom_col(aes(x = targets), fill = grey20k, 
                position = position_nudge(y = -0.15), width = 0.5) +
@@ -113,11 +115,12 @@
       theme(
         strip.placement = "outside",
         strip.text = element_text(face = "bold")
-      )
+      ) +
+      expand_limits(x = c(-0.1, 0))
     
     
     df_kp_viz %>% 
-      filter(str_detect(mech_name, ("DISCOVER|CHEKUP|Open"))) %>% 
+      filter(str_detect(mech_name, ("DISCOVER|CHEKUP|Open|SAFE"))) %>% 
       ggplot(aes(y = indicator)) +
       geom_col(aes(x = targets), fill = grey20k, 
                position = position_nudge(y = -0.15), width = 0.5) +
@@ -136,12 +139,14 @@
       scale_fill_identity() +
       scale_y_discrete(limits = rev) +
       scale_x_continuous(labels = label_number_si(), position = "top", expand = c(0.15, 0.1)) +
-      labs(x = NULL, y = NULL, title = str_to_upper("Total KP Achievements for FY22"))+
-      #caption = metadata$caption) +
+      labs(x = NULL, y = NULL, title = str_to_upper("Total KP Achievements for FY22"),
+      caption = metadata$caption) +
       theme(
         strip.placement = "outside",
         strip.text = element_text(face = "bold")
       )
+    
+    si_save(glue("Graphics/{metadata$curr_fy}KP_achv_partner.png"), scale = 1.25)
 
 # SPINDOWN ============================================================================
 

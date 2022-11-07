@@ -26,7 +26,7 @@
   load_secrets()
   merdata <- file.path(glamr::si_path("path_msd"))
   file_path <- return_latest(folderpath = merdata,
-                             pattern = "Genie-PSNUByIMs-MultipleOUs-Daily-")
+                             pattern = "PSNUByIMs-Zambia-Daily")
   #pattern = "Genie-PSNUByIMs-Zambia")
 
   # REF ID for plots

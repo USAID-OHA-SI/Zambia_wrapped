@@ -62,7 +62,7 @@
     summarise(across(matches("cumul|targ"), sum, na.rm = T), .groups = "drop") %>% 
     calc_achievement() %>% 
     adorn_achievement() %>% 
-    mutate(tgt_rslt_sum = format_achv(targets, cumulative))
+    mutate(tgt_rslt_sum = format_achv(cumulative, targets))
            
   # So, we want to create a similar shaped data frame so we can bind rows. 
   # BUT -- VLS and VLC do not have "targets" so we'll use actual TX_PVLS and TX_CURR #s in place

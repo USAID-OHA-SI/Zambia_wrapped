@@ -120,4 +120,50 @@
             axis.text.x = element_blank()) 
     
     si_save("Graphics/VLC_VLS_by_province.svg")
+  
+
+# VL BY SNU1 --------------------------------------------------------------
+
+    df_vl_snu1 <- df_site %>% 
+      filter(funding_agency == "USAID",
+             indicator %in% c("TX_CURR","TX_CURR_Lag2", "TX_PVLS"),
+             standardizeddisaggregate %in% c("Age/Sex/HIVStatus", "Age/Sex/Indication/HIVStatus")) %>% 
+      clean_indicator() %>% 
+      group_by(snu1, indicator, fiscal_year) %>% 
+      summarise(across(starts_with("qtr"), sum, na.rm = TRUE), .groups = "drop") %>% 
+      reshape_msd(include_type = FALSE) %>% 
+      pivot_wider(names_from = indicator,
+                  names_glue = "{tolower(indicator)}") %>% 
+      arrange(snu1, period) %>% 
+      group_by(snu1, period) %>% 
+      mutate(vlc = tx_pvls_d/tx_curr_lag2,
+             vls = tx_pvls / tx_pvls_d,
+             vls_adj = tx_pvls /tx_curr_lag2) %>% 
+      ungroup() 
+    
+    
+    df_vl_snu1 %>% 
+      filter(snu1 != "Lusaka Province") %>% 
+      ggplot(aes(x = period, group = 1)) +
+      geom_line(aes(y = vls), color = burnt_sienna) +
+      geom_point(aes(y = vls), shape = 21, fill = burnt_sienna, size = 3,
+                 color = "white") +
+      geom_line(aes(y = vlc), color = denim) +
+      geom_point(aes(y = vlc), shape = 21, fill = denim, size = 3,
+                 color = "white") +
+      geom_text(aes(y = vlc, label = percent(vlc, 1)), size = 9/.pt,
+                family = "Source Sans Pro", color = denim, 
+                vjust = -1) +
+      geom_text(aes(y = vls, label = percent(vls, 1)), size = 9/.pt,
+                family = "Source Sans Pro", color = burnt_sienna, 
+                vjust = -1) +
+      facet_wrap(~snu1) +
+      si_style_nolines(facet_space = 0.5) +
+      expand_limits(x = c(1, 10), y = c(0.7,1.05)) +
+      theme(axis.text.y = element_blank()) +
+      labs(x = NULL, y = NULL) +
+      labs(title = "USAID VIRAL LOAD COVERAGE AND VIRAL LOAD SUPPRESSION TRENDS", 
+           caption = glue("{metadata$caption}"))
+    si_save("Graphics/ZMB_vls_vlc_by_snu1.svg")
+    
  

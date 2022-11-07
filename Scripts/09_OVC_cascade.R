@@ -28,10 +28,10 @@ library(lubridate)
 
 # GLOBAL VARIABLES --------------------------------------------------------
 ref_id <- "f1292dac"
-genie_path <- return_latest(si_path(), "Genie-PSNUByIMs-Zambia-Daily")
-site_path  <- return_latest(si_path(), "Genie-SiteByIMs-Zambia-Daily-2022-10-27.zip")
+genie_path <- return_latest(si_path(), "PSNUByIMs-Zambia-Daily")
+#site_path  <- return_latest(si_path(), "Genie-SiteByIMs-Zambia-Daily-2022-10-27.zip")
 
-get_metadata(site_path)
+get_metadata(genie_path)
 
 source("Scripts/99_custom_functions.R")
 
@@ -40,9 +40,10 @@ source("Scripts/99_custom_functions.R")
 
 # IMPORT ------------------------------------------------------------------
 
-df <- read_msd(genie_path) %>% filter(operatingunit == "Zambia", funding_agency == "USAID")
+#df <- read_msd(genie_path) %>% filter(operatingunit == "Zambia", funding_agency == "USAID")
+df <- read_msd(genie_path) %>% filter(operatingunit == "Zambia")
 
-df_site <- read_msd(site_path) %>% filter(funding_agency == "USAID", indicator %in% c("TX_CURR", "OVC_SERV"))
+# df_site <- read_msd(site_path) %>% filter(funding_agency == "USAID", indicator %in% c("TX_CURR", "OVC_SERV"))
 
 full_pds <- (min(df$fiscal_year) - 1) %>% 
   paste0("-10-01") %>% 
@@ -96,25 +97,15 @@ df_hivstat2 <-
 
 
 df_tx <- 
-  df_site %>% 
-  filter(indicator %in% c("TX_CURR", "OVC_SERV"), 
-         standardizeddisaggregate %in% c("Age/Sex/HIVStatus", "Age/Sex/ProgramStatus"), 
-         #standardizeddisaggregate %in% c("Age/Sex/HIVStatus"), 
-         fiscal_year == metadata$curr_fy, 
-         ageasentered %in% c("<01", "01-04", "05-09", "10-14", "15-19")
-         #trendscoarse %in% c("<15", "<18")
-  ) %>% 
-  # Flag sites with positive OVC_SERV
-  group_sum(type = standardizeddisaggregate, facility, facilityuid) %>% 
-  mutate(ovc_flag = case_when(
-    indicator == "OVC_SERV" & qtr4 >0 ~ 1
-    )
-  ) %>% 
-  group_by(facility) %>% 
-  fill(., ovc_flag, .direction = "updown") %>% 
-  filter(ovc_flag == 1) %>% 
-  group_by(indicator) %>% 
+  df <- read_msd(genie_path) %>% filter(operatingunit == "Zambia", indicator == "TX_CURR",
+                                        standardizeddisaggregate %in% c("Age/Sex/HIVStatus"),
+                                        trendscoarse == "<15", 
+                                        fiscal_year == metadata$curr_fy) %>% 
+  group_by(indicator, fiscal_year) %>% 
   summarise(across(c(qtr4), sum, na.rm = T))
+
+
+
 
 # In FY22 we no longer can determine how many are on ART for <18s
 df_ovc <- 
