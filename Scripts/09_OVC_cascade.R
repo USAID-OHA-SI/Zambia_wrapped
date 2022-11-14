@@ -95,15 +95,37 @@ df_hivstat2 <-
     TRUE ~ type
   ))
 
+# UNDER 15 TX_CURR + OVC ONLY DISTRICTS
+  df_tx_psnu <- 
+  read_msd(genie_path) %>% 
+  filter(operatingunit == "Zambia", 
+         indicator %in% c("TX_CURR", "OVC_HIVSTAT_POS"),
+         standardizeddisaggregate %in% c("Age/Sex/HIVStatus", "Total Numerator"),
+         fiscal_year == metadata$curr_fy) %>% 
+  group_by(indicator, psnu, trendscoarse, snu1, fiscal_year) %>% 
+  summarise(across(c(qtr4), sum, na.rm = T)) %>% 
+  ungroup() %>% 
+  mutate(keep_flag = case_when(
+    indicator == "OVC_HIVSTAT_POS" ~ 1,
+    indicator == "TX_CURR" & trendscoarse == "<15" ~ 1,
+    TRUE ~ 0
+  )) %>% 
+  filter(keep_flag == 1) %>% 
+  select(-trendscoarse) %>% 
+  pivot_wider(names_from = indicator, values_from = qtr4) %>% 
+  filter(!is.na(OVC_HIVSTAT_POS)) %>% 
+  mutate(proxy_coverage = OVC_HIVSTAT_POS / TX_CURR)
 
-df_tx <- 
-  df <- read_msd(genie_path) %>% filter(operatingunit == "Zambia", indicator == "TX_CURR",
-                                        standardizeddisaggregate %in% c("Age/Sex/HIVStatus"),
-                                        trendscoarse == "<15", 
-                                        fiscal_year == metadata$curr_fy) %>% 
-  group_by(indicator, fiscal_year) %>% 
-  summarise(across(c(qtr4), sum, na.rm = T))
+  df_tx_psnu %>% 
+    group_by(fiscal_year) %>% 
+    summarise(proxy_cov = sum(OVC_HIVSTAT_POS)/sum(TX_CURR))
+  
 
+  df_tx <- df_tx_psnu %>% 
+  group_by(fiscal_year) %>% 
+  summarize(qtr4 = sum(TX_CURR)) %>% 
+  mutate(indicator = "TX_CURR",
+         type = "TX_CURR <15")
 
 
 
@@ -182,10 +204,10 @@ df_ovc %>%
   coord_flip() +
   scale_x_discrete(limits = rev(levels(df_ovc$x_order))) +
   labs(x = NULL, y = NULL,
-       caption = glue("Source: {metadata$msd_source}"))
+       caption = glue::glue("{metadata$caption}"))
 
 
-si_save(glue("Graphics/{metadata$curr_pd}_ZAM_OVC_CASCADE2.svg"), scale = 1.15)
+si_save(glue("Graphics/{metadata$curr_pd}_ZAM_OVC_CASCADE_TX_U15.svg"), scale = 1.15)
 
 # Fair bit of hand edits required in AI
 
