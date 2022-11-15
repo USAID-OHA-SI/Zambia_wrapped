@@ -50,8 +50,8 @@
 
   df_msd <- read_msd(file_path) %>% 
     fix_mech_names() %>% 
-    mutate(snu1 = str_remove_all(snu1, " Province")) %>% 
-    filter(funding_agency == "USAID")
+    mutate(snu1 = str_remove_all(snu1, " Province")) 
+    #filter(funding_agency == "USAID")
     
   plhiv <- read_msd(plhiv_path) %>% 
     filter(operatingunit == "Zambia") %>% 
@@ -75,11 +75,11 @@
     prinf()
  
   # Generate plots for all agencies
-  batch_cascade_plot(df_msd, imgpath = "Images/Cascade/All")
+  batch_cascade_plot(df_msd, imgpath = "Images/Cascade/All", imgtype =".svg")
     
   # Generate plots for just USAID
-  batch_cascade_plot(df_msd %>% filter(funding_agency == "USAID"),
-                     imgpath = "Images/Cascade/USAID", imgtype =".svg")
+  batch_cascade_plot(df_msd %>% clean_agency() %>% filter(funding_agency == "CDC"),
+                     imgpath = "Images/Cascade/cdc", imgtype =".svg")
   
   # Loop over mechs
   batch_cascade_plot(df_msd %>% filter(mech_name == "DISCOVER"),
