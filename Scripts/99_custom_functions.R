@@ -266,3 +266,10 @@
             mech_name = ifelse(mech_code == {{mech2}}, "Action HIV", mech_name))
  } 
  
+
+# RETURN EVERY NTH TICK ---------------------------------------------------
+# https://stackoverflow.com/questions/52919899/ggplot2-display-every-nth-value-on-discrete-axis
+ every_nth = function(n) {
+   return(function(x) {x[c(TRUE, rep(FALSE, n - 1))]})
+ }
+ 
