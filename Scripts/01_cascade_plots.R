@@ -609,5 +609,40 @@ map(mech_list, ~tx_psnu_peds_plot(.x))
     
     
 
-# SPINDOWN ============================================================================
+# AD HOC VL + Proxy Retention ============================================================================
+    
+    # Used clipr to save to clipboard and deliver to google sheet
+    
+    df_vl <- df_msd %>% 
+      filter(ageasentered %in% c("20-24", "25-29", "30-34"),
+             sex == "Male") %>% 
+      create_vl_df(ageasentered, sex) %>% 
+      arrange(sex, ageasentered, period)
+    
+    
+    df_cont_tx <- 
+      df_msd %>% 
+      filter(indicator %in% c("TX_NEW", "TX_CURR", "TX_ML"),
+             standardizeddisaggregate %in% c("Age Aggregated/Sex/HIVStatus", 
+                                             "Age/Sex/HIVStatus", 
+                                             "Age/Sex/ARTNoContactReason/HIVStatus"),
+             ageasentered %in% c("20-24", "25-29", "30-34"),
+             sex == "Male") %>% 
+      group_by(indicator, sex, ageasentered, otherdisaggregate, fiscal_year) %>% 
+      summarise(across(starts_with("qtr"), sum, na.rm = TRUE), 
+                .groups = "drop") %>%
+      reshape_msd(include_type = FALSE) %>% 
+      mutate(keep_flag = case_when(
+        indicator %in% c("TX_CURR", "TX_NEW") ~ 1, 
+        indicator == "TX_ML" & otherdisaggregate == "No Contact Outcome - Transferred Out" ~ 1, 
+        TRUE ~ 0
+      ),
+      indicator = ifelse(indicator == "TX_ML", "TX_ML_TO", indicator)) %>% 
+      filter(keep_flag == 1) %>% 
+      select(-otherdisaggregate) %>% 
+      spread(indicator, value) %>% 
+      group_by(sex, ageasentered) %>% 
+      mutate(TX_CURR_LAG1 = lag(TX_CURR, n = 1), .after = "TX_CURR") %>% 
+      mutate(PROXY_RETENTION = TX_CURR / (TX_CURR_LAG1 + TX_NEW))
+
 
