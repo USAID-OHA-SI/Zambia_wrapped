@@ -646,3 +646,42 @@ map(mech_list, ~tx_psnu_peds_plot(.x))
       mutate(PROXY_RETENTION = TX_CURR / (TX_CURR_LAG1 + TX_NEW))
 
 
+
+# AD HOC TX_NEW by fine age bands / partner -------------------------------
+
+    tx_curr_fineage <- df_msd %>% 
+      mutate(mech_name = ifelse(mech_name == "EQUIP", "ACTION HIV", mech_name)) %>% 
+      filter(funding_agency == "USAID", 
+             indicator == "TX_NEW", 
+             standardizeddisaggregate == "Age/Sex/HIVStatus",
+             trendscoarse == "<15") %>% 
+      group_by(mech_name, fiscal_year, indicator, age_2019) %>% 
+      summarise(across(matches("targ|qtr"), sum, na.rm = T)) %>% 
+      ungroup() %>% 
+      reshape_msd(direction = "quarters") %>% 
+      mutate(achv = results_cumulative / targets,
+             qtr_flag = ifelse(str_detect(period, "Q4"), 1, 0),
+             mech_name = fct_relevel(mech_name, 
+                                     c("SAFE", "ACTION HIV", "DISCOVER", "Zam Health")))
+    
+    
+    tx_curr_fineage %>% 
+      ggplot(aes(x = period, group = mech_name)) +
+      geom_line(aes(y = results), color = scooter_med) +
+      geom_point(aes(y = results), color = scooter_med) +
+      facet_grid(mech_name ~ age_2019, scales = "fixed", space = "free", switch = "y") +
+      geom_text(aes(y = results, label = comma(results)), size = 8/.pt, 
+                    family = "Source Sans Pro", 
+                    vjust = -0.5) +
+      si_style_ygrid() +      
+      scale_x_discrete(labels = c("FY21Q1", "", "", "Q4", "FY22Q1", "", "", "Q4")) +
+      labs(x = NULL, y = NULL, title = str_to_upper("Pediatric TX_NEW quaterly results by partner"),
+           caption = metadata$caption) +
+      theme(
+        strip.placement = "outside",
+        strip.text = element_text(face = "bold")
+      ) +
+      scale_y_continuous(limits = c(0, 150))
+    
+    si_save("Images/TX_NEW_fineage_partner.png", scale = 1.25)
+      
