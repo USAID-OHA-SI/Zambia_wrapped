@@ -17,13 +17,19 @@
     library(tidytext)
     library(patchwork)
     library(ggtext)
+    library(ggdist)
+    library(gghalves)
+    library(ggbeeswarm)
+    library(readxl)
+    library(fuzzyjoin)
+    library(ggnewscale)
     
     
   # SI specific paths/functions  
     load_secrets()
     merdata <- file.path(glamr::si_path("path_msd"))
     file_path <- return_latest(folderpath = merdata,
-      pattern = "Genie-SiteByIMs-Zambia-Daily")
+      pattern = "Site_IM_FY20-23_20221114.*_Zambia")
       
   # Grab metadata
    get_metadata(file_path)
@@ -69,11 +75,15 @@
    df_peds_vl <- 
      df_msd %>% 
       filter(trendscoarse == "<15") %>% 
-      create_vl_df(snu1, trendscoarse) %>% 
-      mutate(snu1 = str_remove_all(snu1, " Province")) %>% 
-      filter(snu1 %ni% c("_Military Zambia", "Muchinga", "Western"))
+      create_vl_df(snu1, psnu, trendscoarse) %>% 
+      mutate(snu1 = str_remove_all(snu1, " Province"),
+             psnu = str_remove_all(psnu, " District")) %>% 
+      filter(snu1 %ni% c("_Military Zambia", "Muchinga", "Western")) %>% 
+     # Add below becuase of NAN and INF values that come from dividing by 0
+     mutate_if(is.numeric, function(x) ifelse(is.infinite(x), 0, x)) %>% 
+     arrange(psnu, period)
    
-   googlesheets4::write_sheet(df_peds_vl, ss = gd_id_ovc, sheet = "PEDS_VLS")
+   googlesheets4::write_sheet(df_peds_vl, ss = gd_id_ovc, sheet = "PEDS_PSNU_VLS")
     
   df_ovc_hivstat <- 
     df_msd %>% 
@@ -160,4 +170,114 @@
   si_save("Images/ZMB_proxy_coverage.png", scale = 1.25)
   
  # What is the relationship between VLC & OVC PROXY COVERAGE?
+  
+
+# WHAT IS THE "RIGHT" PEDS TO ADULT RATIO? LETS LOOK BY SITES -------------
+
+  df_tx_peds <- 
+    df_msd %>% 
+    filter(indicator == "TX_CURR",
+           standardizeddisaggregate == "Age/Sex/HIVStatus",
+           facility != "Data reported above Facility level", 
+           mech_name != "Dedup") %>% 
+    group_by(facility, orgunituid, psnu, snu1, fiscal_year, trendscoarse, indicator) %>% 
+    summarise(across(starts_with("qtr"), sum, na.rm = T)) %>% 
+    ungroup() %>% 
+    reshape_msd() %>% 
+    select(-c(indicator, period_type)) %>% 
+    pivot_wider(names_from = trendscoarse, values_from = value, names_glue = "TX_CURR_{trendscoarse}") %>% 
+    mutate(TX_CURR_ALL = `TX_CURR_<15`+ `TX_CURR_15+`,
+           peds_tx_share = `TX_CURR_<15` / TX_CURR_ALL) %>% 
+    group_by(orgunituid) %>% 
+    mutate(yoy_change = `TX_CURR_<15` - lag(`TX_CURR_<15`, n = 11),
+           share_change = peds_tx_share - lag(peds_tx_share, n = 11)) %>% 
+    ungroup()
+  
+ 
+    # Flag all sites with no pediatric clients
+    df_tx_peds_vol <- 
+      df_tx_peds %>% 
+      mutate(sans_enfants = ifelse(peds_tx_share == 0 | is.na(peds_tx_share), 0, 1)) %>% 
+      group_by(orgunituid) %>% 
+      mutate(drop_flag = sum(sans_enfants)) %>% 
+      ungroup() %>% 
+      filter(drop_flag != 0) %>%
+      mutate(fy = substr(period, 3, 4)) %>% 
+      group_by(orgunituid, fy) %>% 
+      mutate(tx_curr_peds_ave = mean(`TX_CURR_<15`, na.rm = T) %>% round(., -1)) %>%
+      group_by(fy) %>% 
+      mutate(size = ntile(tx_curr_peds_ave, 3),
+             size_label = case_when(
+               size == 1 ~ "LOW",
+               size == 2 ~ "MEDIUM",
+               size == 3 ~ 'HIGH',
+               TRUE ~ NA_character_),
+             size_label = fct_relevel(size_label, c("LOW", "MEDIUM", "HIGH"))
+      ) %>% 
+      ungroup() %>% 
+      group_by(orgunituid) %>% 
+      fill(., yoy_change, .direction = "up") %>% 
+      pivot_longer(cols = c(`TX_CURR_<15`, `TX_CURR_15+`),
+                   names_to = "tx_age",
+                   values_to = "values")
+  
+    write_csv(df_tx_peds_vol, "Dataout/TX_curr_site_level_longer.csv", na = "")
+  
+    
+    
+    
+  df_tx_peds_high <- 
+    df_tx_peds_vol %>% 
+    filter(size_label == "HIGH") %>% 
+    group_by(orgunituid) %>% 
+    fill(., yoy_change, .direction = "up")
+    
+    
+  # Show a slope plot for sites that had more than 60 peds fall off in the last three years
+  df_tx_peds_high %>% 
+    filter(period %in% c("FY20Q1", "FY22Q4"), 
+           abs(yoy_change) > 100) %>% 
+    ggplot(aes(x = period, y = `TX_CURR_<15`, group = orgunituid)) +
+    geom_point() +
+    geom_line() +
+    facet_wrap(~(yoy_change > 0), scales = "free_y") +
+    ggrepel::geom_text_repel(data = . %>% filter(period == "FY22Q4"), aes(label = facility), size = 7/.pt, 
+              family = "Source Sans Pro",
+              hjust = -1,
+              force = 0.5, 
+              nudge_x = -0.25, 
+              direction = "y") +
+    si_style()
+  
+  
+  
+    lm(`TX_CURR_<15` ~ TX_CURR_ALL + I(x = period), data = df_tx_peds)
+    
+    df_tx_peds_vol %>% 
+      filter(period %in% c("FY20Q1", "FY22Q4")) %>% 
+      filter(!is.na(size_label)) %>% 
+      ggplot(aes(x = period, y = peds_tx_share)) +
+      geom_boxplot(
+        width = 0.15, fill = "white",
+        size = 0.5, outlier.shape = NA,
+        color = scooter, 
+        alpha = 0.85
+      ) +
+      stat_halfeye(
+        adjust = 0.33, 
+        width = 0.67, 
+        color = NA,
+        position = position_nudge(x = 0.15),
+        fill = scooter, alpha = 0.85
+      ) +
+      geom_half_point(
+        side = "l",
+        range_scale = 0.25,
+        size = 1,
+        color = old_rose_light,
+        alpha = 0.5
+      ) +
+      coord_flip() +
+      facet_wrap(~size_label) +
+      scale_y_continuous(limits = c(0, 0.25))
   
