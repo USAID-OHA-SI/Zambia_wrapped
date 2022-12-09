@@ -458,7 +458,7 @@ map(mech_list, ~tx_psnu_peds_plot(.x))
   
   # Remap mech names so EQUIP becomes ACTION HIV TO SHOW across time
   df_vl_ip <- df_msd %>% 
-    filter(funding_agency == "USAID") %>%
+    filter(funding_agency == "USAID", trendscoarse == "<15") %>%
     mutate(mech_name = ifelse(mech_name == "EQUIP", "ACTION HIV", mech_name)) %>% 
     create_vl_df(mech_name) %>% 
     mutate(mech_name = fct_relevel(mech_name, c("SAFE", "ACTION HIV", "DISCOVER", "Zam Health")))
@@ -534,7 +534,7 @@ map(mech_list, ~tx_psnu_peds_plot(.x))
       theme(axis.text.y = element_blank(), 
           axis.text.x = element_blank()) +
     labs(x = NULL, y = NULL) +
-    expand_limits(y = c(0.7,1.15)) 
+    expand_limits(y = c(0.7,1)) 
    
     bottom_ip <- 
       df_vl_ip %>% 
@@ -555,7 +555,7 @@ map(mech_list, ~tx_psnu_peds_plot(.x))
     plot_ip <- top_ip / bottom_ip + plot_layout(heights = c(1, 3)) +
       plot_annotation(title = glue("VIRAL LOAD SUMMARY FOR {metadata$curr_fy} BY PARTNER")) 
     
-    si_save("Graphics/VL_summary_partners.svg")
+    si_save("Graphics/VL_summary_partners_peds.svg")
     
   # VLS trends for peds
     top <- df_vl_peds %>% 
