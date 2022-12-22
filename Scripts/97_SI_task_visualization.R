@@ -23,6 +23,7 @@
   # SI specific paths/functions  
     load_secrets()
     gd_id <- "1uPFL57VxyaZaAnsLrVPQmtkc2jAW2Stn3A3ftovj52k"  
+    gd_id_write <- "1OSpnKGXqHnB3R0EAZK7ebRkL2RapcyzJq6TNtW3H1ko"
     
   # Grab metadata
    #get_metadata(file_path)
@@ -48,6 +49,13 @@
                                                          "Henry", "Maurice P", "Mwila C", "Noah",
                                                          "Vincent", "Isaac"))
                     )
+    
+    df_tasks %>% 
+      select(focus, person_order, coverage, task) %>% 
+      spread(person_order, coverage) %>% 
+      write_sheet(ss = gd_id_write, sheet = "Task_Matrix_text")
+      
+    
     
 
 # MUNGE ============================================================================
