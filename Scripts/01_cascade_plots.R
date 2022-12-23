@@ -32,7 +32,7 @@
     load_secrets()
     merdata <- file.path(glamr::si_path("path_msd"))
     file_path <- return_latest(folderpath = merdata,
-      pattern = "Genie-PSNUByIMs-Zambia")
+      pattern = "PSNU_IM_FY20-23_20221114_v1_1_Zambia.zip")
       
     plhiv_path <- return_latest(folderpath = merdata,
                                 pattern = "SUBNAT")
@@ -607,7 +607,73 @@ map(mech_list, ~tx_psnu_peds_plot(.x))
     
     si_save("Graphics/VL_summary_peds_2022.svg")
     
+# AD HOC VL PEDS by SNU 
+
+# AD HOC VIRAL LOAD PEDS BY SNU1 ------------------------------------------
+
+    df_vl_peds <- df_msd %>% 
+      filter(trendscoarse == "<15") %>% 
+      create_vl_df(snu1)
     
+    df_vl_peds %>% 
+      filter(str_detect(snu1, "Militar", negate = T),
+             str_detect(period, "20", negate = T)) %>% 
+      mutate(snu1_order = fct_reorder(snu1, tx_curr, .desc = T)) %>% 
+      ggplot(aes(x = period, group = 1)) +
+      geom_line(aes(y = vls), color = burnt_sienna) +
+      geom_point(aes(y = vls), shape = 21, fill = burnt_sienna, size = 3,
+                 color = "white") +
+      geom_line(aes(y = vlc), color = denim) +
+      geom_point(aes(y = vlc), shape = 21, fill = denim, size = 3,
+                 color = "white") +
+      geom_text(aes(y = vlc, label = percent(vlc, 1)), size = 9/.pt,
+                family = "Source Sans Pro", color = denim, 
+                vjust = -1) +
+      geom_text(aes(y = vls, label = percent(vls, 1)), size = 9/.pt,
+                family = "Source Sans Pro", color = burnt_sienna, 
+                vjust = -1) +
+      si_style_nolines() +
+      expand_limits(x = c(1, 9)) +
+      theme(axis.text.y = element_blank()) +
+      labs(x = NULL, y = NULL) +
+      scale_x_discrete(labels = c("FY21Q1", "Q2", "Q3", "Q4",
+                                  "FY22Q1", "Q2", "Q3", "Q4")) +
+      facet_wrap(~snu1_order)
+    
+    
+    si_save("Graphics/VL_summary_peds_2022_all_Zambia.svg", scale = 1.33)
+    
+    
+
+# VLC by fine age bands ---------------------------------------------------
+
+    df_vl_peds_fa <- df_msd %>% 
+      filter(trendscoarse == "<15") %>% 
+      create_vl_df(age_2019)
+    
+    df_vl_peds_fa %>% 
+      filter(str_detect(period, "20", negate = T),
+             age_2019 %ni% c("<01")) %>% 
+      ggplot(aes(x = period, group = 1)) +
+      geom_line(aes(y = vlc), color = denim) +
+      geom_point(aes(y = vlc), shape = 21, fill = denim, size = 3,
+                 color = "white") +
+      geom_text(aes(y = vlc, label = percent(vlc, 1)), size = 9/.pt,
+                family = "Source Sans Pro", color = denim, 
+                vjust = 2) +
+      si_style_ygrid() +
+      expand_limits(x = c(1, 9)) +
+      theme() +
+      labs(x = NULL, y = NULL) +
+      scale_y_continuous(labels = percent) +
+      scale_x_discrete(labels = c("FY21Q1", "Q2", "Q3", "Q4",
+                                  "FY22Q1", "Q2", "Q3", "Q4")) +
+      facet_wrap(~age_2019) +
+      labs(title = glue("PEDIATRIC VIRAL LOAD COVERAGE FINE AGE BANDS FOR {metadata$curr_fy}"),
+           caption = glue("{metadata$caption}"))
+      
+    
+    si_save("Graphics/VL_summary_peds_fine_age.svg", scale = 1.33)
 
 # AD HOC VL + Proxy Retention ============================================================================
     

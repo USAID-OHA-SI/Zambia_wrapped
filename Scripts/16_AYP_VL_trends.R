@@ -25,7 +25,7 @@
     load_secrets()
     merdata <- file.path(glamr::si_path("path_msd"))
     file_path <- return_latest(folderpath = merdata,
-        pattern = "Genie-PSNUByIMs-Zambia-Daily-2022-11-14")
+        pattern = "PSNU_IM_FY20-23_20221114_v1_1_Zambia.zip")
       
     plhiv_path <- return_latest(folderpath = merdata,
                                 pattern = "SUBNAT")
@@ -282,7 +282,45 @@
     
     si_save("Graphics/TX_CURR_peds_trends.svg", scale = 1.5)
     
+
+# PEDS HTS_TST_POS TARGETS ACROSS TIME ------------------------------------
+
+  df_peds_tst <- df_msd %>% 
+      filter(trendscoarse == "<15", indicator == "HTS_TST_POS",
+             standardizeddisaggregate == "Modality/Age/Sex/Result") %>% 
+      group_by(snu1, fiscal_year, indicator) %>% 
+      summarise(across(c("targets", "cumulative"), sum, na.rm = T)) %>%
+      ungroup() %>% 
+      adorn_achievement() %>% 
+      mutate(snu1 = str_remove_all(snu1, " Province"))
     
+  df_peds_tst %>% 
+    filter(str_detect(snu1, "Military", negate = T)) %>% 
+    group_by(snu1) %>% 
+    mutate(tot = sum(targets, na.rm = T)) %>% 
+    ungroup() %>% 
+    mutate(snu1_order = fct_reorder(snu1, tot, .desc = T),
+           ymax = case_when(
+             snu1 %in% c("Copperbelt", "Lusaka", "Southern", "Central", "Luapula") ~ 2500, 
+             snu1 %in% c("Northern", "Western", "Muchinga", "Eastern", "NorthWestern") ~ 1000
+            )
+           ) %>% 
+    ggplot(aes(x = fiscal_year, group = snu1)) +
+    geom_blank(aes(y = 0)) +
+    geom_blank(aes(y = ymax)) +
+    geom_ribbon(data = . %>% filter(fiscal_year %ni% c("2023")), 
+                aes(ymin = 0, ymax = cumulative), fill = scooter_med, alpha = 0.15) +
+    geom_line(aes(y = targets), linewidth = 0.75, color = grey70k,  linetype = "dashed") +
+    geom_line(data = . %>% filter(fiscal_year %ni% c("2023")), aes(y = cumulative), linewidth = 0.75, color = scooter) +
+    geom_point(data = . %>%  filter(fiscal_year %ni% c("2023")), aes(y = cumulative), size = 3, color = scooter) +
+    geom_text(data = . %>% filter(fiscal_year %ni% c("2023")), aes(y = cumulative, label = percent(achievement, 1)), family = "Source Sans Pro", size = 8/.pt) +
+    facet_wrap(~snu1_order, nrow = 2, scales = "free_y") +
+    labs(x = NULL, y = NULL, title = "PLACEHOLDER",
+         caption = glue("{metadata$caption}")) +
+    si_style_ygrid() +
+    scale_y_continuous(labels = label_number_si()) 
+  
+  si_save("Graphics/HTS_TST_POS_peds_trends.svg", scale = 1.5)
     
 # TESTING MUNGE AND VIZ ============================================================================
 
