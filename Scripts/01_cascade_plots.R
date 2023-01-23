@@ -32,7 +32,7 @@
     load_secrets()
     merdata <- file.path(glamr::si_path("path_msd"))
     file_path <- return_latest(folderpath = merdata,
-      pattern = "PSNU_IM_FY20-23_20221114_v1_1_Zambia.zip")
+      pattern = "PSNU_IM_FY20-23.*Zambia.zip")
       
     plhiv_path <- return_latest(folderpath = merdata,
                                 pattern = "SUBNAT")
